@@ -43,7 +43,7 @@ func (i InsertQuery[Doc]) Exec() (Doc, error) {
 			return ex, err
 		}
 	}
-	sql, args := i.model.Conn.Builder.Select("*").From(i.model.tableName).Where(sq.Eq{i.model.pk: id}).MustSql()
+	sql, args := i.model.Conn.Builder.Select("*").From(i.model.tableName).Where(Eq{i.model.pk: id}).MustSql()
 	err := i.model.Conn.DB.Get(ex, sql, args...)
 	return ex, err
 }

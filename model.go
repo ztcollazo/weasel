@@ -2,8 +2,6 @@ package weasel
 
 import (
 	"reflect"
-
-	sq "github.com/Masterminds/squirrel"
 )
 
 type Field struct {
@@ -39,11 +37,11 @@ func (m Model[Doc]) Create(d Doc) (Doc, error) {
 }
 
 func (m Model[Doc]) Find(value any) (Doc, error) {
-	return Select([]string{"*"}, m).Where(sq.Eq{m.pk: value}).Exec()
+	return Select([]string{"*"}, m).Where(Eq{m.pk: value}).Exec()
 }
 
 func (m Model[Doc]) FindBy(name string, value any) (Doc, error) {
-	return Select([]string{"*"}, m).Where(sq.Eq{name: value}).Exec()
+	return Select([]string{"*"}, m).Where(Eq{name: value}).Exec()
 }
 
 func (m Model[Doc]) All() SelectManyQuery[Doc] {

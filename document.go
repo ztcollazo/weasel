@@ -3,7 +3,6 @@ package weasel
 import (
 	"reflect"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/carlmjohnson/truthy"
 )
 
@@ -36,12 +35,12 @@ func (d *Document[Doc]) model() Model[Doc] {
 }
 
 func (d Document[Doc]) Delete() error {
-	_, err := d.Model.Conn.Builder.Delete(d.Model.tableName).Where(sq.Eq{d.Model.pk: d.Get(d.Model.pk)}).Exec()
+	_, err := d.Model.Conn.Builder.Delete(d.Model.tableName).Where(Eq{d.Model.pk: d.Get(d.Model.pk)}).Exec()
 	return err
 }
 
 func (d Document[Doc]) Save() error {
-	q := d.Model.Conn.Builder.Update(d.Model.tableName).Where(sq.Eq{d.Model.pk: d.Get(d.Model.pk)})
+	q := d.Model.Conn.Builder.Update(d.Model.tableName).Where(Eq{d.Model.pk: d.Get(d.Model.pk)})
 	for k := range d.Model.fields {
 		q = q.Set(k, d.Get(k))
 	}
