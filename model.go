@@ -8,13 +8,14 @@ import (
 
 type Field struct {
 	Name       string
+	DBName     string
 	Type       string
 	Default    string
 	NotNil     bool
 	PrimaryKey bool
 }
 
-type Model[Doc any] struct {
+type Model[Doc docbase] struct {
 	Conn      Connection
 	tableName string
 	pk        string
@@ -23,43 +24,45 @@ type Model[Doc any] struct {
 }
 
 func (m Model[Doc]) Create(d Doc) (Doc, error) {
-	v := reflect.ValueOf(d)
+	v := reflect.Indirect(reflect.ValueOf(d))
 	columns := make([]string, 0)
 	values := make([]any, 0)
 	for i := 0; i < v.NumField(); i++ {
 		field := v.Field(i)
 		t := v.Type().Field(i)
-		if f, ok := m.fields[t.Name]; ok && !f.PrimaryKey {
-			columns = append(columns, m.fields[t.Name].Name)
+		if f, ok := m.fields[t.Tag.Get("db")]; ok && !f.PrimaryKey {
+			columns = append(columns, f.DBName)
 			values = append(values, field.Interface())
 		}
 	}
-	return Insert(m.ex, m.tableName, m.pk, m.Conn).Columns(columns...).Values(values...).Exec()
+	return Insert(m).Columns(columns...).Values(values...).Exec()
 }
 
 func (m Model[Doc]) Find(value any) (Doc, error) {
-	return Select(m.ex, []string{"*"}, m.tableName, m.Conn).Where(sq.Eq{m.pk: value}).Exec()
+	return Select([]string{"*"}, m).Where(sq.Eq{m.pk: value}).Exec()
 }
 
 func (m Model[Doc]) FindBy(name string, value any) (Doc, error) {
-	return Select(m.ex, []string{"*"}, m.tableName, m.Conn).Where(sq.Eq{name: value}).Exec()
+	return Select([]string{"*"}, m).Where(sq.Eq{name: value}).Exec()
 }
 
 func (m Model[Doc]) All() SelectManyQuery[Doc] {
-	return SelectMany(m.ex, []string{"*"}, m.tableName, m.Conn)
+	return SelectMany([]string{"*"}, m)
 }
 
-func Create[Doc any](conn Connection, ex Doc, name string) Model[Doc] {
+func Create[Doc document[Doc]](conn Connection, ex Doc, name string) Model[Doc] {
+	doc := ex
 	var pk string
 	var fields = make(map[string]Field, 0)
-	t := reflect.TypeOf(ex)
+	t := reflect.Indirect(reflect.ValueOf(doc)).Type()
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 		if name, ok := field.Tag.Lookup("db"); !ok {
 			continue
 		} else {
 			f := Field{
-				Name: name,
+				Name:   field.Name,
+				DBName: name,
 			}
 			if tp, to := field.Tag.Lookup("type"); !to {
 				f.Type = field.Type.Name()
@@ -74,14 +77,16 @@ func Create[Doc any](conn Connection, ex Doc, name string) Model[Doc] {
 			} else {
 				f.PrimaryKey = false
 			}
-			fields[field.Name] = f
+			fields[name] = f
 		}
 	}
-	return Model[Doc]{
+	model := Model[Doc]{
 		Conn:      conn,
 		tableName: name,
 		pk:        pk,
 		fields:    fields,
-		ex:        ex,
+		ex:        doc,
 	}
+	doc.Init(doc, model)
+	return model
 }

@@ -6,12 +6,9 @@ import (
 	sq "github.com/Masterminds/squirrel"
 )
 
-type InsertQuery[Doc any] struct {
-	builder   sq.InsertBuilder
-	ex        Doc
-	conn      Connection
-	tableName string
-	pk        string
+type InsertQuery[Doc docbase] struct {
+	builder sq.InsertBuilder
+	model   Model[Doc]
 }
 
 func (i InsertQuery[Doc]) Columns(columns ...string) InsertQuery[Doc] {
@@ -30,12 +27,12 @@ func (i InsertQuery[Doc]) Values(values ...any) InsertQuery[Doc] {
 }
 
 func (i InsertQuery[Doc]) Exec() (Doc, error) {
-	ex := i.ex
+	ex := i.model.ex
 	var id int64
-	if i.conn.driver == "postgres" {
+	if i.model.Conn.driver == "postgres" {
 		s, g := i.builder.MustSql()
-		s = strings.TrimSuffix(s, ";")
-		i.conn.DB.QueryRow(s+" RETURNING "+i.pk, g...).Scan(&id)
+		s = strings.TrimSuffix(s, ";") + " RETURNING " + i.model.pk
+		i.model.Conn.DB.QueryRow(s, g...).Scan(&id)
 	} else {
 		res, err := i.builder.Exec()
 		if err != nil {
@@ -46,26 +43,21 @@ func (i InsertQuery[Doc]) Exec() (Doc, error) {
 			return ex, err
 		}
 	}
-	sql, args := i.conn.Builder.Select("*").From(i.tableName).Where(sq.Eq{i.pk: id}).MustSql()
-	err := i.conn.DB.Get(&ex, sql, args...)
+	sql, args := i.model.Conn.Builder.Select("*").From(i.model.tableName).Where(sq.Eq{i.model.pk: id}).MustSql()
+	err := i.model.Conn.DB.Get(ex, sql, args...)
 	return ex, err
 }
 
-func Insert[Doc any](ex Doc, tableName, pk string, conn Connection) InsertQuery[Doc] {
+func Insert[Doc docbase](model Model[Doc]) InsertQuery[Doc] {
 	return InsertQuery[Doc]{
-		builder:   conn.Builder.Insert(tableName),
-		ex:        ex,
-		tableName: tableName,
-		conn:      conn,
-		pk:        pk,
+		builder: model.Conn.Builder.Insert(model.tableName),
+		model:   model,
 	}
 }
 
-type SelectQuery[Doc any] struct {
-	builder   sq.SelectBuilder
-	ex        Doc
-	conn      Connection
-	tableName string
+type SelectQuery[Doc docbase] struct {
+	builder sq.SelectBuilder
+	model   Model[Doc]
 }
 
 func (s SelectQuery[Doc]) Columns(columns ...string) SelectQuery[Doc] {
@@ -155,25 +147,21 @@ func (s SelectQuery[Doc]) Where(pred any, args ...any) SelectQuery[Doc] {
 
 func (s SelectQuery[Doc]) Exec() (Doc, error) {
 	sql, args := s.builder.MustSql()
-	ex := s.ex
-	err := s.conn.DB.Get(&ex, sql, args...)
+	ex := s.model.ex
+	err := s.model.Conn.DB.Get(ex, sql, args...)
 	return ex, err
 }
 
-func Select[Doc any](ex Doc, columns []string, tableName string, conn Connection) SelectQuery[Doc] {
+func Select[Doc docbase](columns []string, model Model[Doc]) SelectQuery[Doc] {
 	return SelectQuery[Doc]{
-		builder:   conn.Builder.Select(columns...).From(tableName),
-		ex:        ex,
-		tableName: tableName,
-		conn:      conn,
+		builder: model.Conn.Builder.Select(columns...).From(model.tableName),
+		model:   model,
 	}
 }
 
-type SelectManyQuery[Doc any] struct {
-	builder   sq.SelectBuilder
-	ex        Doc
-	conn      Connection
-	tableName string
+type SelectManyQuery[Doc docbase] struct {
+	builder sq.SelectBuilder
+	model   Model[Doc]
 }
 
 func (s SelectManyQuery[Doc]) Columns(columns ...string) SelectManyQuery[Doc] {
@@ -263,16 +251,14 @@ func (s SelectManyQuery[Doc]) Where(pred any, args ...any) SelectManyQuery[Doc] 
 
 func (s SelectManyQuery[Doc]) Exec() ([]Doc, error) {
 	sql, args := s.builder.MustSql()
-	ex := []Doc{s.ex}
-	err := s.conn.DB.Select(&ex, sql, args...)
+	ex := []Doc{s.model.ex}
+	err := s.model.Conn.DB.Select(&ex, sql, args...)
 	return ex, err
 }
 
-func SelectMany[Doc any](ex Doc, columns []string, tableName string, conn Connection) SelectManyQuery[Doc] {
+func SelectMany[Doc docbase](columns []string, model Model[Doc]) SelectManyQuery[Doc] {
 	return SelectManyQuery[Doc]{
-		builder:   conn.Builder.Select(columns...).From(tableName),
-		ex:        ex,
-		tableName: tableName,
-		conn:      conn,
+		builder: model.Conn.Builder.Select(columns...).From(model.tableName),
+		model:   model,
 	}
 }

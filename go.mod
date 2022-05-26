@@ -4,8 +4,9 @@ go 1.18
 
 require (
 	github.com/Masterminds/squirrel v1.5.3
+	github.com/carlmjohnson/truthy v0.22.0
 	github.com/jmoiron/sqlx v1.3.5
-	github.com/lib/pq v1.10.6
+	github.com/lib/pq v1.10.6 // For testing
 	github.com/stretchr/testify v1.7.1
 )
 
