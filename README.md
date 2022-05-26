@@ -46,7 +46,6 @@ func main() {
   // Done! use it like you would Active Record
   p, _ := Person.Find(1).FirstName
   p.FirstName // 🤯 🥳
-  // Also supports: FindBy, All
 
   john, _ /* error handling also */ = Person.Create(&PersonSchema{
     FirstName: "John",
@@ -61,6 +60,13 @@ func main() {
 
   // And then when you're done
   john.Delete()
+
+  // You can also do batch queries
+  people, _ := Person.All().Where(weasel.Eq{"first_name": "John"}).Limit(3).Offset(6).Exec() // For built queries, make sure that you append exec.
+  // people => []PersonSchema{...}
+
+  // Or specific queries
+  jane := Person.FindBy("first_name", "Jane")
 }
 ```
 
