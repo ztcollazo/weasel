@@ -1,8 +1,6 @@
 package weasel
 
 import (
-	"strings"
-
 	sq "github.com/Masterminds/squirrel"
 )
 
@@ -30,9 +28,7 @@ func (i InsertQuery[Doc]) Exec() (Doc, error) {
 	ex := i.model.ex
 	var id int64
 	if i.model.Conn.driver == "postgres" {
-		s, g := i.builder.MustSql()
-		s = strings.TrimSuffix(s, ";") + " RETURNING " + i.model.pk
-		i.model.Conn.DB.QueryRow(s, g...).Scan(&id)
+		i.builder.Suffix("RETURNING id").QueryRow().Scan(&id)
 	} else {
 		res, err := i.builder.Exec()
 		if err != nil {
