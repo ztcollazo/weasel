@@ -36,6 +36,11 @@ type Person struct {
 	FirstName string `db:"first_name" type:"text"`
 	LastName  string `db:"last_name" type:"text"`
 	Email     string `db:"email" type:"text"`
+	Hello     string
+}
+
+func (p Person) Init(d *Person) {
+	d.Hello = "world"
 }
 
 type WeaselTestSuite struct {
@@ -115,6 +120,12 @@ func (s *WeaselTestSuite) TestDelete() {
 	s.assert.Nil(err)
 	err = p.Delete()
 	s.assert.Nil(err)
+}
+
+func (s *WeaselTestSuite) TestInit() {
+	p, err := s.model.Find(1)
+	s.assert.Nil(err)
+	s.assert.Equal("world", p.Hello)
 }
 
 func TestWeasel(t *testing.T) {

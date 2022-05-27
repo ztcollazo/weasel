@@ -22,6 +22,7 @@ type Model[Doc docbase] struct {
 }
 
 func (m Model[Doc]) Create(d Doc) (Doc, error) {
+	callInit(d)
 	v := reflect.Indirect(reflect.ValueOf(d))
 	columns := make([]string, 0)
 	values := make([]any, 0)
@@ -85,6 +86,6 @@ func Create[Doc document[Doc]](conn Connection, ex Doc, name string) Model[Doc] 
 		fields:    fields,
 		ex:        doc,
 	}
-	doc.Init(doc, model)
+	doc.init(doc, model)
 	return model
 }
