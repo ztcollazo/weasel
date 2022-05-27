@@ -37,6 +37,16 @@ func main() {
     FirstName string `db:"first_name" type:"text"`
     LastName  string `db:"last_name" type:"text"`
     Email     string `db:"email" type:"text"`
+    Hello     string
+  }
+
+  // You can define an `Init` function that is called whenever a document is created
+  // the method can have a pointer receiver. It takes one argument, the document, and modifies it
+  func (p PersonSchema) Init(d *PersonSchema) {
+    d.Hello = "world"
+    // this is where you would do your validations
+    // d.Errors is a []error
+    // d.Errors = append(d.Errors, errors.New("whatever"))
   }
 
   // Now for the fun part
@@ -46,6 +56,7 @@ func main() {
   // Done! use it like you would Active Record
   p, _ := Person.Find(1).FirstName
   p.FirstName // 🤯 🥳
+  p.Hello //=> "world"
 
   john, _ /* error handling also */ = Person.Create(&PersonSchema{
     FirstName: "John",
