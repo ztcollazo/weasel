@@ -10,31 +10,47 @@ import (
 type docbase interface {
 	Delete() error
 	Save() error
+	Get(string) any
+	Set(string, any)
+	errors() []error
 }
 
 type document[Doc docbase] interface {
 	docbase
-	init(Doc, Model[Doc])
-	model() Model[Doc]
+	Create(Doc, *Model[Doc])
+	model() *Model[Doc]
 }
 
 type Document[Doc document[Doc]] struct {
 	document[Doc]
-	Model  Model[Doc]
+	Model  *Model[Doc]
 	Errors []error
-	Get    func(string) any
-	Set    func(string, any)
+	get    func(string) any
+	set    func(string, any)
 }
 
-func (d *Document[Doc]) init(doc Doc, model Model[Doc]) {
+// This is an internal function, exported only for use with reflect
+// Do not use.
+func (d *Document[Doc]) Create(doc Doc, model *Model[Doc]) {
 	d.Model = model
-	d.Get = get(doc)
-	d.Set = set(doc)
-	callInit(doc)
+	d.get = get(doc)
+	d.set = set(doc)
 }
 
-func (d *Document[Doc]) model() Model[Doc] {
+func (d Document[Doc]) model() *Model[Doc] {
 	return d.Model
+}
+
+func (d Document[Doc]) errors() []error {
+	return d.Errors
+}
+
+func (d Document[Doc]) Get(name string) any {
+	return d.get(name)
+}
+
+func (d Document[Doc]) Set(name string, value any) {
+	d.set(name, value)
 }
 
 func (d Document[Doc]) Delete() error {
@@ -49,8 +65,8 @@ func (d Document[Doc]) Save() error {
 	}
 
 	callInit(d)
-	if len(d.Errors) > 0 {
-		return errors.New("document is not valid")
+	if len(d.errors()) > 0 {
+		return errors.New("document is invalid")
 	}
 	_, err := q.Exec()
 	return err
@@ -82,15 +98,29 @@ func set[Doc document[Doc]](d Doc) func(string, any) {
 	}
 }
 
-func callInit[Doc docbase](d Doc) {
+func callInit[Doc docbase](d Doc, model ...*Model[Doc]) {
 	v := reflect.ValueOf(d)
+	if truthy.Value(model) && truthy.Value(model[0]) {
+		anonymous := make([]reflect.Value, 0)
+		x := v.Elem()
+		for i := 0; i < x.NumField(); i++ {
+			if f := x.Type().Field(i); f.Anonymous {
+				anonymous = append(anonymous, x.Field(i).Addr())
+			}
+		}
+		for _, a := range anonymous {
+			if m := a.MethodByName("Create"); m.IsValid() {
+				m.Call([]reflect.Value{v, reflect.ValueOf(model[0])})
+			}
+		}
+	}
 	t := v.MethodByName("Init")
 	if t.IsValid() {
-		t.Call([]reflect.Value{v})
+		t.Call([]reflect.Value{})
 	} else {
-		t = reflect.Indirect(v).MethodByName("Init")
-		if t.IsValid() {
-			t.Call([]reflect.Value{v})
+		m := reflect.Indirect(v).MethodByName("Init")
+		if m.IsValid() {
+			m.Call([]reflect.Value{})
 		}
 	}
 }

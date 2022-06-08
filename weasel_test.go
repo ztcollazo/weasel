@@ -17,7 +17,8 @@ CREATE TABLE person (
 		id serial primary key,
     first_name text,
     last_name text,
-    email text
+    email text,
+		place_id integer
 );
 
 CREATE TABLE place (
@@ -27,38 +28,57 @@ CREATE TABLE place (
     telcode integer
 );
 
-INSERT INTO person (first_name, last_name, email) VALUES ('John', 'Doe', 'john@doe.com');
-INSERT INTO person (first_name, last_name, email) VALUES ('Jane', 'Doe', 'jane@doe.net');`
+INSERT INTO person (first_name, last_name, email, place_id) VALUES ('John', 'Doe', 'john@doe.com', 1);
+INSERT INTO person (first_name, last_name, email, place_id) VALUES ('Jane', 'Doe', 'jane@doe.net', 1);
+INSERT INTO place (country, city, telcode) VALUES ('United States of America', 'Chicago', 1);`
 
-type Person struct {
-	weasel.Document[*Person]
-	Id        int    `db:"id" pk:"" type:"serial"`
-	FirstName string `db:"first_name" type:"text"`
-	LastName  string `db:"last_name" type:"text"`
-	Email     string `db:"email" type:"text"`
+type PersonSchema struct {
+	weasel.Document[*PersonSchema]
+	Id        int                            `db:"id" pk:"" type:"serial"`
+	FirstName string                         `db:"first_name" type:"text"`
+	LastName  string                         `db:"last_name" type:"text"`
+	Email     string                         `db:"email" type:"text"`
+	PlaceId   int                            `db:"place_id" type:"integer"`
+	Place     weasel.BelongsTo[*PlaceSchema] `belongsto:"place" fk:"id" key:"place_id"`
 	Hello     string
 }
 
-func (p Person) Init(d *Person) {
-	d.Hello = "world"
+type PlaceSchema struct {
+	weasel.Document[*PlaceSchema]
+	Id      int                           `db:"id" pk:"" type:"serial"`
+	Country string                        `db:"country" type:"text"`
+	City    string                        `db:"city" type:"text"`
+	Telcode int                           `db:"telcode" type:"integer"`
+	People  weasel.HasMany[*PersonSchema] `hasmany:"person" fk:"place_id" key:"id"`
+}
+
+var conn = weasel.Connect("postgres", "user=ztcollazo dbname=postgres sslmode=disable")
+
+var Place = weasel.Create(conn, &PlaceSchema{}, "place")
+
+var Person = weasel.Create(conn, &PersonSchema{}, "person")
+
+func (p *PersonSchema) Init() {
+	p.Hello = "world"
+	weasel.UseBelongsTo(p, &Place)
+}
+
+func (p *PlaceSchema) Init() {
+	weasel.UseHasMany(p, &Person)
 }
 
 type WeaselTestSuite struct {
 	suite.Suite
 	assert *assert.Assertions
-	conn   weasel.Connection
-	model  weasel.Model[*Person]
 }
 
 func (s *WeaselTestSuite) SetupTest() {
 	s.assert = assert.New(s.T())
-	s.conn = weasel.Connect("postgres", "user=ztcollazo dbname=postgres sslmode=disable")
-	s.conn.DB.MustExec(schema)
-	s.model = weasel.Create(s.conn, &Person{}, "person")
+	conn.DB.MustExec(schema)
 }
 
 func (s *WeaselTestSuite) TestInsert() {
-	p, err := s.model.Create(&Person{
+	p, err := Person.Create(&PersonSchema{
 		FirstName: "Zachary",
 		LastName:  "Collazo",
 		Email:     "ztcollazo08@gmail.com",
@@ -70,7 +90,7 @@ func (s *WeaselTestSuite) TestInsert() {
 }
 
 func (s *WeaselTestSuite) TestFind() {
-	p, err := s.model.Find(1)
+	p, err := Person.Find(1)
 	s.assert.Nil(err)
 	s.assert.Equal("john@doe.com", p.Email)
 	s.assert.Equal("John", p.FirstName)
@@ -78,7 +98,7 @@ func (s *WeaselTestSuite) TestFind() {
 }
 
 func (s *WeaselTestSuite) TestFindBy() {
-	p, err := s.model.FindBy("first_name", "John")
+	p, err := Person.FindBy("first_name", "John")
 	s.assert.Nil(err)
 	s.assert.Equal(1, p.Id)
 	s.assert.Equal("john@doe.com", p.Email)
@@ -87,13 +107,13 @@ func (s *WeaselTestSuite) TestFindBy() {
 }
 
 func (s *WeaselTestSuite) TestAll() {
-	p, err := s.model.All().Exec()
+	p, err := Person.All().Exec()
 	s.assert.Nil(err)
 	s.assert.GreaterOrEqual(len(p), 2)
 }
 
 func (s *WeaselTestSuite) TestGetSet() {
-	p, err := s.model.Find(1)
+	p, err := Person.Find(1)
 	s.assert.Nil(err)
 
 	s.assert.Equal("John", p.Get("first_name"))
@@ -102,7 +122,7 @@ func (s *WeaselTestSuite) TestGetSet() {
 }
 
 func (s *WeaselTestSuite) TestSave() {
-	p, err := s.model.Find(1)
+	p, err := Person.Find(1)
 	s.assert.Nil(err)
 
 	p.FirstName = "Pizza"
@@ -112,7 +132,7 @@ func (s *WeaselTestSuite) TestSave() {
 }
 
 func (s *WeaselTestSuite) TestDelete() {
-	p, err := s.model.Create(&Person{
+	p, err := Person.Create(&PersonSchema{
 		FirstName: "Somebody",
 		LastName:  "Else",
 		Email:     "somebodyelse@whatever.com",
@@ -123,9 +143,38 @@ func (s *WeaselTestSuite) TestDelete() {
 }
 
 func (s *WeaselTestSuite) TestInit() {
-	p, err := s.model.Find(1)
+	p, err := Person.Find(1)
 	s.assert.Nil(err)
 	s.assert.Equal("world", p.Hello)
+}
+
+func (s *WeaselTestSuite) TestBelongsTo() {
+	p, err := Person.Find(1)
+	s.assert.Nil(err)
+
+	place, err := Place.Find(1)
+	s.assert.Nil(err)
+
+	t, err := p.Place()
+	s.assert.Nil(err)
+
+	s.assert.Equal(place, t)
+}
+
+func (s *WeaselTestSuite) TestHasMany() {
+	p, err := Place.Find(1)
+	s.assert.Nil(err)
+
+	person, err := Person.Find(1)
+	s.assert.Nil(err)
+
+	t, err := p.People().Where(weasel.Eq{"id": p.Id}).Exec()
+	s.assert.Nil(err)
+
+	s.assert.Equal(person.FirstName, t[0].FirstName)
+	s.assert.Equal(person.LastName, t[0].LastName)
+	s.assert.Equal(person.Id, t[0].Id)
+	s.assert.Equal(person.Email, t[0].Email)
 }
 
 func TestWeasel(t *testing.T) {

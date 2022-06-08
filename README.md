@@ -26,26 +26,38 @@ import (
 )
 
 func main() {
-  // Connect is a wrapper around SQLX's connect; se that for more details.
+  // Connect is a wrapper around SQLX's connect; see that for more details.
   conn := weasel.Connect("postgres", "user=foo dbname=bar sslmode=off")
 
   // Let's create the schema now
   type PersonSchema struct {
     weasel.Document[*PersonSchema] // Note the pointer!!!
     // PK denotes it as the primary key
-    Id        int    `db:"id" pk:"" type:"serial"`
-    FirstName string `db:"first_name" type:"text"`
-    LastName  string `db:"last_name" type:"text"`
-    Email     string `db:"email" type:"text"`
+    Id        int                            `db:"id" pk:"" type:"serial"`
+    FirstName string                         `db:"first_name" type:"text"`
+    LastName  string                         `db:"last_name" type:"text"`
+    Email     string                         `db:"email" type:"text"`
+    PlaceId   int                            `db:"place_id" type:"integer"`
+    // Relations
+    Place     weasel.BelongsTo[*PlaceSchema] `belongsto:"place"` // Again with the required pointer
     Hello     string
   }
 
-  // You can define an `Init` function that is called whenever a document is created
-  // the method can have a pointer receiver. It takes one argument, the document, and modifies it
-  func (p PersonSchema) Init(d *PersonSchema) {
-    d.Hello = "world"
+  // You can define an `Init` function that is called whenever a document is created.
+  // Again, the method MUST have a pointer receiver.
+  func (p *PersonSchema) Init() {
+    p.Hello = "world"
+    // Relations, supports: BelongsTo, HasMany (through), HasOne
+    weasel.UseBelongsTo(p, &Place /* pointer to model as second param */)
+
+    // HasMany through is slightly different
+    // In that case, you would still use the UseHasMany function
+    // But in the schema, you would add a `through` tag
+    // with the intermittent model
+
+
     // this is where you would do your validations
-    // d.Errors is a []error
+    // d.Errors is an []error
     // d.Errors = append(d.Errors, errors.New("whatever"))
   }
 
@@ -54,14 +66,15 @@ func main() {
   Person := weasel.Create(conn, &PersonSchema{}, person)
 
   // Done! use it like you would Active Record
-  p, _ := Person.Find(1).FirstName
+  p, _ := Person.Find(1)
   p.FirstName // 🤯 🥳
   p.Hello //=> "world"
 
-  john, _ /* error handling also */ = Person.Create(&PersonSchema{
+  john, err /* error handling also */ = Person.Create(&PersonSchema{
     FirstName: "John",
     LastName: "Doe",
     Email: "john@doe.com",
+    PlaceId: 1,
   })
 
   john.Email //=> john@doe.com
@@ -78,6 +91,9 @@ func main() {
 
   // Or specific queries
   jane := Person.FindBy("first_name", "Jane")
+
+  // Now let's get the place
+  jane.Place() //=> PlaceSchema{...}
 }
 ```
 

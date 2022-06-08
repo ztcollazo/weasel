@@ -249,6 +249,9 @@ func (s SelectManyQuery[Doc]) Exec() ([]Doc, error) {
 	sql, args := s.builder.MustSql()
 	ex := []Doc{s.model.ex}
 	err := s.model.Conn.DB.Select(&ex, sql, args...)
+	for _, d := range ex {
+		callInit(d, &s.model)
+	}
 	return ex, err
 }
 
