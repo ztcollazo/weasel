@@ -105,7 +105,7 @@ func main() {
 - [x] Read
 - [X] Update
 - [X] Delete
-- [ ] Relations
+- [X] Relations
 - [ ] Validations
 
 ...and any that may come up in the future.
