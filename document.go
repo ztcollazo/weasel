@@ -13,6 +13,7 @@ type docbase interface {
 	Get(string) any
 	Set(string, any)
 	errors() []error
+	Init()
 }
 
 type document[Doc docbase] interface {
@@ -36,6 +37,9 @@ func (d *Document[Doc]) Create(doc Doc, model *Model[Doc]) {
 	d.get = get(doc)
 	d.set = set(doc)
 }
+
+// You can define a custom init function to run on document creation.
+func (d Document[Doc]) Init() {}
 
 func (d Document[Doc]) model() *Model[Doc] {
 	return d.Model
@@ -114,13 +118,5 @@ func callInit[Doc docbase](d Doc, model ...*Model[Doc]) {
 			}
 		}
 	}
-	t := v.MethodByName("Init")
-	if t.IsValid() {
-		t.Call([]reflect.Value{})
-	} else {
-		m := reflect.Indirect(v).MethodByName("Init")
-		if m.IsValid() {
-			m.Call([]reflect.Value{})
-		}
-	}
+	d.Init()
 }
