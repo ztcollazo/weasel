@@ -1,6 +1,6 @@
 # Weasel
 
-**WARNING :warning:: WORK IN PROGRESS** Most basic features are available. See the roadmap below.
+_Note: Weasel is just now reaching a stable API. Most necessary features are available or easily integratable. You may still expect a few API changes, but the majority should be usable._
 
 Weasel is **the last ORM for Golang you'll ever need.** Built with Generics, so it requires at least Go 1.18+.
 
@@ -59,6 +59,9 @@ func main() {
     // this is where you would do your validations
     // d.Errors is an []error
     // d.Errors = append(d.Errors, errors.New("whatever"))
+    if p.FirstName == "" {
+      p.Errors = append(p.Errors, errors.New("missing first name"))
+    }
   }
 
   // Now for the fun part
@@ -94,6 +97,12 @@ func main() {
 
   // Now let's get the place
   jane.Place() //=> PlaceSchema{...}
+
+  // You can also check if a document is valid
+  jane.IsValid() //=> true
+  jane.FirstName = ""
+  jane.IsValid() //=> false
+  jane.IsInvalid() //=> true
 }
 ```
 
@@ -107,6 +116,12 @@ func main() {
 - [X] Delete
 - [X] Relations
 - [ ] Validations
+  - [X] Check valid
+  - [X] Errors
+  - [ ] Validate Presence
+  - [ ] Validate Format
+  - [ ] Validate Custom
+  - [ ] Validate Uniqueness
 
 ...and any that may come up in the future.
 

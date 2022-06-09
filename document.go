@@ -15,6 +15,8 @@ type docbase interface {
 	errors() []error
 	setErrors([]error)
 	Init()
+	IsValid() bool
+	IsInvalid() bool
 }
 
 type document[Doc docbase] interface {
@@ -79,6 +81,15 @@ func (d Document[Doc]) Save() error {
 	}
 	_, err := q.Exec()
 	return err
+}
+
+func (d Document[Doc]) IsValid() bool {
+	callInit(d)
+	return len(d.Errors) <= 0
+}
+
+func (d Document[Doc]) IsInvalid() bool {
+	return !d.IsValid()
 }
 
 func get[Doc document[Doc]](d Doc) func(string) any {

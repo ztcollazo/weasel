@@ -193,6 +193,8 @@ func (s *WeaselTestSuite) TestInvalidDoc() {
 
 	s.assert.Equal(errors.New("document is invalid"), err)
 	s.assert.True(contains(p.Errors, errors.New("missing email")))
+	s.assert.False(p.IsValid())
+	s.assert.True(p.IsInvalid())
 }
 
 func TestWeasel(t *testing.T) {
