@@ -1,8 +1,10 @@
 package weasel_test
 
 import (
+	"errors"
 	"testing"
 
+	"github.com/carlmjohnson/truthy"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -61,6 +63,9 @@ var Person = weasel.Create(conn, &PersonSchema{}, "person")
 func (p *PersonSchema) Init() {
 	p.Hello = "world"
 	weasel.UseBelongsTo(p, &Place)
+	if !truthy.Value(p.Email) {
+		p.Errors = append(p.Errors, errors.New("missing email"))
+	}
 }
 
 func (p *PlaceSchema) Init() {
@@ -82,6 +87,7 @@ func (s *WeaselTestSuite) TestInsert() {
 		FirstName: "Zachary",
 		LastName:  "Collazo",
 		Email:     "ztcollazo08@gmail.com",
+		PlaceId:   1,
 	})
 	s.assert.Nil(err)
 	s.assert.Equal("ztcollazo08@gmail.com", p.Email)
@@ -136,6 +142,7 @@ func (s *WeaselTestSuite) TestDelete() {
 		FirstName: "Somebody",
 		LastName:  "Else",
 		Email:     "somebodyelse@whatever.com",
+		PlaceId:   1,
 	})
 	s.assert.Nil(err)
 	err = p.Delete()
@@ -177,6 +184,27 @@ func (s *WeaselTestSuite) TestHasMany() {
 	s.assert.Equal(person.Email, t[0].Email)
 }
 
+func (s *WeaselTestSuite) TestInvalidDoc() {
+	p, err := Person.Create(&PersonSchema{
+		FirstName: "Hello",
+		LastName:  "World",
+		PlaceId:   1,
+	})
+
+	s.assert.Equal(errors.New("document is invalid"), err)
+	s.assert.True(contains(p.Errors, errors.New("missing email")))
+}
+
 func TestWeasel(t *testing.T) {
 	suite.Run(t, new(WeaselTestSuite))
+}
+
+func contains(s []error, str error) bool {
+	for _, v := range s {
+		if v.Error() == str.Error() {
+			return true
+		}
+	}
+
+	return false
 }

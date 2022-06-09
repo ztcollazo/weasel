@@ -13,6 +13,7 @@ type docbase interface {
 	Get(string) any
 	Set(string, any)
 	errors() []error
+	setErrors([]error)
 	Init()
 }
 
@@ -49,6 +50,10 @@ func (d Document[Doc]) errors() []error {
 	return d.Errors
 }
 
+func (d Document[Doc]) setErrors(es []error) {
+	reflect.ValueOf(d).FieldByName("Errors").Set(reflect.ValueOf(es))
+}
+
 func (d Document[Doc]) Get(name string) any {
 	return d.get(name)
 }
@@ -63,14 +68,14 @@ func (d Document[Doc]) Delete() error {
 }
 
 func (d Document[Doc]) Save() error {
-	q := d.Model.Conn.Builder.Update(d.Model.tableName).Where(Eq{d.Model.pk: d.Get(d.Model.pk)})
-	for k := range d.Model.fields {
-		q = q.Set(k, d.Get(k))
-	}
-
 	callInit(d)
 	if len(d.errors()) > 0 {
 		return errors.New("document is invalid")
+	}
+
+	q := d.Model.Conn.Builder.Update(d.Model.tableName).Where(Eq{d.Model.pk: d.Get(d.Model.pk)})
+	for k := range d.Model.fields {
+		q = q.Set(k, d.Get(k))
 	}
 	_, err := q.Exec()
 	return err

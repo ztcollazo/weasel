@@ -35,8 +35,9 @@ type Model[Doc docbase] struct {
 }
 
 func (m Model[Doc]) Create(d Doc) (Doc, error) {
+	callInit(d, &m)
 	if len(d.errors()) > 0 {
-		return *new(Doc), errors.New("document is invalid")
+		return d, errors.New("document is invalid")
 	}
 	v := reflect.Indirect(reflect.ValueOf(d))
 	columns := make([]string, 0)
@@ -52,6 +53,7 @@ func (m Model[Doc]) Create(d Doc) (Doc, error) {
 	doc, err := Insert(m).Columns(columns...).Values(values...).Exec()
 	if err == nil {
 		callInit(doc, &m)
+		// And just in case
 		if len(doc.errors()) > 0 {
 			return doc, errors.New("document is invalid")
 		}
