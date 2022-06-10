@@ -7,21 +7,25 @@ import (
 	"github.com/carlmjohnson/truthy"
 )
 
-type docbase interface {
+type DocumentBase interface {
 	Delete() error
 	Save() error
 	Get(string) any
 	Set(string, any)
 	errors() []error
-	setErrors([]error)
+	AddError(error)
+	PrimaryKey() string
 	Init()
 	IsValid() bool
 	IsInvalid() bool
+	Table() string
+	Conn() Connection
 }
 
-type document[Doc docbase] interface {
-	docbase
+type document[Doc DocumentBase] interface {
+	DocumentBase
 	Create(Doc, *Model[Doc])
+	Use(Middleware)
 	model() *Model[Doc]
 }
 
@@ -31,7 +35,10 @@ type Document[Doc document[Doc]] struct {
 	Errors []error
 	get    func(string) any
 	set    func(string, any)
+	use    func(Middleware)
 }
+
+type Middleware func(DocumentBase)
 
 // This is an internal function, exported only for use with reflect
 // Do not use.
@@ -39,6 +46,11 @@ func (d *Document[Doc]) Create(doc Doc, model *Model[Doc]) {
 	d.Model = model
 	d.get = get(doc)
 	d.set = set(doc)
+	d.use = use(doc)
+}
+
+func (d *Document[Doc]) Use(m Middleware) {
+	d.use(m)
 }
 
 // You can define a custom init function to run on document creation.
@@ -52,8 +64,20 @@ func (d Document[Doc]) errors() []error {
 	return d.Errors
 }
 
-func (d Document[Doc]) setErrors(es []error) {
-	reflect.ValueOf(d).FieldByName("Errors").Set(reflect.ValueOf(es))
+func (d *Document[Doc]) AddError(es error) {
+	d.Errors = append(d.Errors, es)
+}
+
+func (d Document[Doc]) PrimaryKey() string {
+	return d.Model.pk
+}
+
+func (d Document[Doc]) Table() string {
+	return d.Model.tableName
+}
+
+func (d Document[Doc]) Conn() Connection {
+	return d.Model.Conn
 }
 
 func (d Document[Doc]) Get(name string) any {
@@ -70,8 +94,8 @@ func (d Document[Doc]) Delete() error {
 }
 
 func (d Document[Doc]) Save() error {
-	callInit(d)
-	if len(d.errors()) > 0 {
+	callInit(&d)
+	if len(d.Errors) > 0 {
 		return errors.New("document is invalid")
 	}
 
@@ -84,7 +108,7 @@ func (d Document[Doc]) Save() error {
 }
 
 func (d Document[Doc]) IsValid() bool {
-	callInit(d)
+	callInit(&d)
 	return len(d.Errors) <= 0
 }
 
@@ -118,7 +142,13 @@ func set[Doc document[Doc]](d Doc) func(string, any) {
 	}
 }
 
-func callInit[Doc docbase](d Doc, model ...*Model[Doc]) {
+func use[Doc document[Doc]](doc Doc) func(Middleware) {
+	return func(m Middleware) {
+		m(doc)
+	}
+}
+
+func callInit[Doc DocumentBase](d Doc, model ...*Model[Doc]) {
 	v := reflect.ValueOf(d)
 	if truthy.Value(model) && truthy.Value(model[0]) {
 		anonymous := make([]reflect.Value, 0)

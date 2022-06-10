@@ -25,7 +25,7 @@ type Relation struct {
 	Through    string
 }
 
-type Model[Doc docbase] struct {
+type Model[Doc DocumentBase] struct {
 	Conn      Connection
 	tableName string
 	pk        string

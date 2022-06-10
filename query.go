@@ -4,7 +4,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 )
 
-type InsertQuery[Doc docbase] struct {
+type InsertQuery[Doc DocumentBase] struct {
 	builder sq.InsertBuilder
 	model   Model[Doc]
 }
@@ -44,14 +44,14 @@ func (i InsertQuery[Doc]) Exec() (Doc, error) {
 	return ex, err
 }
 
-func Insert[Doc docbase](model Model[Doc]) InsertQuery[Doc] {
+func Insert[Doc DocumentBase](model Model[Doc]) InsertQuery[Doc] {
 	return InsertQuery[Doc]{
 		builder: model.Conn.Builder.Insert(model.tableName),
 		model:   model,
 	}
 }
 
-type SelectQuery[Doc docbase] struct {
+type SelectQuery[Doc DocumentBase] struct {
 	builder sq.SelectBuilder
 	model   Model[Doc]
 }
@@ -148,14 +148,14 @@ func (s SelectQuery[Doc]) Exec() (Doc, error) {
 	return ex, err
 }
 
-func Select[Doc docbase](columns []string, model Model[Doc]) SelectQuery[Doc] {
+func Select[Doc DocumentBase](columns []string, model Model[Doc]) SelectQuery[Doc] {
 	return SelectQuery[Doc]{
 		builder: model.Conn.Builder.Select(columns...).From(model.tableName),
 		model:   model,
 	}
 }
 
-type SelectManyQuery[Doc docbase] struct {
+type SelectManyQuery[Doc DocumentBase] struct {
 	builder sq.SelectBuilder
 	model   Model[Doc]
 }
@@ -255,7 +255,7 @@ func (s SelectManyQuery[Doc]) Exec() ([]Doc, error) {
 	return ex, err
 }
 
-func SelectMany[Doc docbase](columns []string, model Model[Doc]) SelectManyQuery[Doc] {
+func SelectMany[Doc DocumentBase](columns []string, model Model[Doc]) SelectManyQuery[Doc] {
 	return SelectManyQuery[Doc]{
 		builder: model.Conn.Builder.Select(columns...).From(model.tableName),
 		model:   model,

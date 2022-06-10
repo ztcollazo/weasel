@@ -2,13 +2,14 @@ package weasel_test
 
 import (
 	"errors"
+	"regexp"
 	"testing"
 
-	"github.com/carlmjohnson/truthy"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/ztcollazo/weasel"
+	"github.com/ztcollazo/weasel/use"
 )
 
 var schema = `
@@ -63,9 +64,12 @@ var Person = weasel.Create(conn, &PersonSchema{}, "person")
 func (p *PersonSchema) Init() {
 	p.Hello = "world"
 	weasel.UseBelongsTo(p, &Place)
-	if !truthy.Value(p.Email) {
-		p.Errors = append(p.Errors, errors.New("missing email"))
-	}
+	p.Use(use.ValidatePresenceOf[string]("email"))
+	p.Use(use.ValidateFormatOf("email", regexp.MustCompile(`[^@ \t\r\n]+@[^@ \t\r\n]+\.[^@ \t\r\n]+`)))
+	p.Use(use.ValidateUniquenessOf("email"))
+	p.Use(use.Validate("email", func(val string) bool {
+		return val != "random@email.com"
+	}))
 }
 
 func (p *PlaceSchema) Init() {
@@ -184,7 +188,7 @@ func (s *WeaselTestSuite) TestHasMany() {
 	s.assert.Equal(person.Email, t[0].Email)
 }
 
-func (s *WeaselTestSuite) TestInvalidDoc() {
+func (s *WeaselTestSuite) TestValidatePresence() {
 	p, err := Person.Create(&PersonSchema{
 		FirstName: "Hello",
 		LastName:  "World",
@@ -192,7 +196,49 @@ func (s *WeaselTestSuite) TestInvalidDoc() {
 	})
 
 	s.assert.Equal(errors.New("document is invalid"), err)
-	s.assert.True(contains(p.Errors, errors.New("missing email")))
+	s.assert.True(contains(p.Errors, errors.New("field email is not present in document")))
+	s.assert.False(p.IsValid())
+	s.assert.True(p.IsInvalid())
+}
+
+func (s *WeaselTestSuite) TestValidateFormat() {
+	p, err := Person.Create(&PersonSchema{
+		FirstName: "Hello",
+		LastName:  "World",
+		Email:     "bob",
+		PlaceId:   1,
+	})
+
+	s.assert.Equal(errors.New("document is invalid"), err)
+	s.assert.True(contains(p.Errors, errors.New(`field email does not match the specified pattern [^@ \t\r\n]+@[^@ \t\r\n]+\.[^@ \t\r\n]+`)))
+	s.assert.False(p.IsValid())
+	s.assert.True(p.IsInvalid())
+}
+
+func (s *WeaselTestSuite) TestValidateUniqueness() {
+	p, err := Person.Create(&PersonSchema{
+		FirstName: "Hello",
+		LastName:  "World",
+		Email:     "john@doe.com",
+		PlaceId:   1,
+	})
+
+	s.assert.Equal(errors.New("document is invalid"), err)
+	s.assert.True(contains(p.Errors, errors.New("value john@doe.com for field email is not unique")))
+	s.assert.False(p.IsValid())
+	s.assert.True(p.IsInvalid())
+}
+
+func (s *WeaselTestSuite) TestValidateCustom() {
+	p, err := Person.Create(&PersonSchema{
+		FirstName: "Hello",
+		LastName:  "World",
+		Email:     "random@email.com",
+		PlaceId:   1,
+	})
+
+	s.assert.Equal(errors.New("document is invalid"), err)
+	s.assert.True(contains(p.Errors, errors.New("field email is not valid")))
 	s.assert.False(p.IsValid())
 	s.assert.True(p.IsInvalid())
 }

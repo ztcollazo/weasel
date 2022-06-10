@@ -1,6 +1,6 @@
 # Weasel
 
-_Note: Weasel is just now reaching a stable API. Most necessary features are available or easily integratable. You may still expect a few API changes, but the majority should be usable._
+*Note: Weasel is just now reaching a stable API. Most necessary features are available or easily integratable. You may still expect a few API changes, but the majority should be usable.*
 
 Weasel is **the last ORM for Golang you'll ever need.** Built with Generics, so it requires at least Go 1.18+.
 
@@ -21,7 +21,8 @@ Here's an example of the API:
 package main
 
 import (
-  "github.com/ztcollazo/weasel"
+  "github.com/ztcollazo/weasel" // Main package
+  "github.com/ztcollazo/weasel/use" // Use package contains middleware and validations
   "github.com/lib/pq" // Or whatever db you're using
 )
 
@@ -58,10 +59,15 @@ func main() {
 
     // this is where you would do your validations
     // d.Errors is an []error
-    // d.Errors = append(d.Errors, errors.New("whatever"))
     if p.FirstName == "" {
-      p.Errors = append(p.Errors, errors.New("missing first name"))
+      p.AddError(errors.New("missing first name"))
     }
+    // or
+    p.Use(use.ValidatePresenceOf[string /* required data type */]("first_name"))
+    // Also supports:
+    // Custom: Validates(field, func(val type) bool)
+    // Unique: ValidatesUniquenessOf(field) probably not production-ready; validate on DB level instead for now
+    // Format: ValidatesFormatOf(field, regexp)
   }
 
   // Now for the fun part
@@ -115,13 +121,13 @@ func main() {
 - [X] Update
 - [X] Delete
 - [X] Relations
-- [ ] Validations
+- [X] Validations
   - [X] Check valid
   - [X] Errors
-  - [ ] Validate Presence
-  - [ ] Validate Format
-  - [ ] Validate Custom
-  - [ ] Validate Uniqueness
+  - [X] Validate Presence
+  - [X] Validate Format
+  - [X] Validate Custom
+  - [X] Validate Uniqueness
 
 ...and any that may come up in the future.
 
