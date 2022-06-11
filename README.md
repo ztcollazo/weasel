@@ -63,10 +63,10 @@ func main() {
       p.AddError(errors.New("missing first name"))
     }
     // or
-    p.Use(use.ValidatePresenceOf[string /* required data type */]("first_name"))
+    p.Use(use.ValidatePresenceOf[string /* validate presence requires data type */]("first_name"))
     // Also supports:
     // Custom: Validates(field, func(val type) bool)
-    // Unique: ValidatesUniquenessOf(field) probably not production-ready; validate on DB level instead for now
+    // Unique: ValidatesUniquenessOf(field)
     // Format: ValidatesFormatOf(field, regexp)
   }
 
@@ -128,6 +128,7 @@ func main() {
   - [X] Validate Format
   - [X] Validate Custom
   - [X] Validate Uniqueness
+- [ ] Model Groups
 
 ...and any that may come up in the future.
 
