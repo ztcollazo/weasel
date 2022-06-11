@@ -51,6 +51,9 @@ func main() {
     // Relations, supports: BelongsTo, HasMany (through), HasOne
     weasel.UseBelongsTo(p, &Place /* pointer to model as second param */)
 
+    // The other relations are fairly straightforward:
+    // HasOne is basically the same as BelongsTo
+    // HasMany is a Group (see below)
     // HasMany through is slightly different
     // In that case, you would still use the UseHasMany function
     // But in the schema, you would add a `through` tag
@@ -109,6 +112,12 @@ func main() {
   jane.FirstName = ""
   jane.IsValid() //=> false
   jane.IsInvalid() //=> true
+
+  // You can add groups to group together documents with certain properties
+  Person.AddGroup("FromUS", weasel.Eq{"place_id": 1})
+
+  // And now
+  Person.Group("FromUS").All().Exec() // Supports Find, FindBy, All (with same API)
 }
 ```
 
@@ -128,7 +137,7 @@ func main() {
   - [X] Validate Format
   - [X] Validate Custom
   - [X] Validate Uniqueness
-- [ ] Model Groups
+- [X] Model Groups
 
 ...and any that may come up in the future.
 

@@ -84,6 +84,7 @@ type WeaselTestSuite struct {
 func (s *WeaselTestSuite) SetupTest() {
 	s.assert = assert.New(s.T())
 	conn.DB.MustExec(schema)
+	Person.CreateGroup("FromUS", weasel.Eq{"place_id": 1}) // Basically the same as BelongsTo now, just a different format
 }
 
 func (s *WeaselTestSuite) TestInsert() {
@@ -179,7 +180,7 @@ func (s *WeaselTestSuite) TestHasMany() {
 	person, err := Person.Find(1)
 	s.assert.Nil(err)
 
-	t, err := p.People().Where(weasel.Eq{"id": p.Id}).Exec()
+	t, err := p.People().All().Where(weasel.Eq{"id": p.Id}).Exec()
 	s.assert.Nil(err)
 
 	s.assert.Equal(person.FirstName, t[0].FirstName)
@@ -241,6 +242,13 @@ func (s *WeaselTestSuite) TestValidateCustom() {
 	s.assert.True(contains(p.Errors, errors.New("field email is not valid")))
 	s.assert.False(p.IsValid())
 	s.assert.True(p.IsInvalid())
+}
+
+func (s *WeaselTestSuite) TestGroup() {
+	p, err := Person.Group("FromUS").All().Exec()
+
+	s.assert.Nil(err)
+	s.assert.Equal("John", p[0].FirstName)
 }
 
 func TestWeasel(t *testing.T) {

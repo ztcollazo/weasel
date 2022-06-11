@@ -32,6 +32,7 @@ type Model[Doc DocumentBase] struct {
 	fields    map[string]Field
 	relations map[string]Relation
 	ex        Doc
+	groups    map[string]whereable
 }
 
 func (m Model[Doc]) Create(d Doc) (Doc, error) {
@@ -88,6 +89,17 @@ func (m Model[Doc]) FindBy(name string, value any) (Doc, error) {
 
 func (m Model[Doc]) All() SelectManyQuery[Doc] {
 	return SelectMany([]string{"*"}, m)
+}
+
+func (m Model[Doc]) CreateGroup(name string, expr whereable) {
+	m.groups[name] = expr
+}
+
+func (m Model[Doc]) Group(name string) Group[Doc] {
+	return Group[Doc]{
+		Where: m.groups[name],
+		Model: m,
+	}
 }
 
 func Create[Doc document[Doc]](conn Connection, ex Doc, name string) Model[Doc] {
@@ -166,6 +178,7 @@ func Create[Doc document[Doc]](conn Connection, ex Doc, name string) Model[Doc] 
 		fields:    fields,
 		ex:        doc,
 		relations: relations,
+		groups:    make(map[string]whereable),
 	}
 	doc.Create(doc, &model)
 	return model
