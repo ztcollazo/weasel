@@ -12,8 +12,11 @@ type DocumentBase interface {
 	Save() error
 	Get(string) any
 	Set(string, any)
-	errors() []error
+	AllErrors() []error
 	AddError(error)
+	SetErrors([]error)
+	RemoveError(int)
+	Error(int) error
 	PrimaryKey() string
 	Init()
 	IsValid() bool
@@ -43,6 +46,7 @@ type Middleware func(DocumentBase)
 // This is an internal function, exported only for use with reflect
 // Do not use.
 func (d *Document[Doc]) Create(doc Doc, model *Model[Doc]) {
+	d.Errors = []error{}
 	d.Model = model
 	d.get = get(doc)
 	d.set = set(doc)
@@ -53,19 +57,31 @@ func (d *Document[Doc]) Use(m Middleware) {
 	d.use(m)
 }
 
-// You can define a custom init function to run on document creation.
+// You can define a custom Init function to run on document creation.
 func (d Document[Doc]) Init() {}
 
 func (d Document[Doc]) model() *Model[Doc] {
 	return d.Model
 }
 
-func (d Document[Doc]) errors() []error {
+func (d Document[Doc]) AllErrors() []error {
 	return d.Errors
 }
 
 func (d *Document[Doc]) AddError(es error) {
 	d.Errors = append(d.Errors, es)
+}
+
+func (d *Document[Doc]) SetErrors(errs []error) {
+	d.Errors = errs
+}
+
+func (d *Document[Doc]) RemoveError(id int) {
+	d.Errors = append(d.Errors[:id], d.Errors[id+1:]...)
+}
+
+func (d Document[Doc]) Error(id int) error {
+	return d.Errors[id]
 }
 
 func (d Document[Doc]) PrimaryKey() string {

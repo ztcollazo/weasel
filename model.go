@@ -37,7 +37,7 @@ type Model[Doc DocumentBase] struct {
 
 func (m Model[Doc]) Create(d Doc) (Doc, error) {
 	callInit(d, &m)
-	if len(d.errors()) > 0 {
+	if len(d.AllErrors()) > 0 {
 		return d, errors.New("document is invalid")
 	}
 	v := reflect.Indirect(reflect.ValueOf(d))
@@ -55,7 +55,7 @@ func (m Model[Doc]) Create(d Doc) (Doc, error) {
 	if err == nil {
 		callInit(doc, &m)
 		// And just in case
-		if len(doc.errors()) > 0 {
+		if len(doc.AllErrors()) > 0 {
 			return doc, errors.New("document is invalid")
 		}
 		return doc, nil
@@ -67,7 +67,7 @@ func (m Model[Doc]) Find(value any) (Doc, error) {
 	doc, err := Select([]string{"*"}, m).Where(Eq{m.pk: value}).Exec()
 	if err == nil {
 		callInit(doc, &m)
-		if len(doc.errors()) > 0 {
+		if len(doc.AllErrors()) > 0 {
 			return doc, errors.New("document is invalid")
 		}
 		return doc, nil
@@ -79,7 +79,7 @@ func (m Model[Doc]) FindBy(name string, value any) (Doc, error) {
 	doc, err := Select([]string{"*"}, m).Where(Eq{name: value}).Exec()
 	if err == nil {
 		callInit(doc, &m)
-		if len(doc.errors()) > 0 {
+		if len(doc.AllErrors()) > 0 {
 			return doc, errors.New("document is invalid")
 		}
 		return doc, nil

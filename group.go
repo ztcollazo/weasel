@@ -25,7 +25,7 @@ func (m Group[Doc]) Find(value any) (Doc, error) {
 	doc, err := stmt.Exec()
 	if err == nil {
 		callInit(doc, &m.Model)
-		if len(doc.errors()) > 0 {
+		if len(doc.AllErrors()) > 0 {
 			return doc, errors.New("document is invalid")
 		}
 		return doc, nil
@@ -41,7 +41,7 @@ func (m Group[Doc]) FindBy(name string, value any) (Doc, error) {
 	doc, err := stmt.Exec()
 	if err == nil {
 		callInit(doc, &m.Model)
-		if len(doc.errors()) > 0 {
+		if len(doc.AllErrors()) > 0 {
 			return doc, errors.New("document is invalid")
 		}
 		return doc, nil
