@@ -2,18 +2,21 @@
 
 *Note: Weasel is just now reaching a stable API. Most necessary features are available or easily integratable. You may still expect a few API changes, but the majority should be usable.*
 
+1. [About](#about)
+2. [API](#api)
+3. [Documentation](#documentation)
+4. [Roadmap](#roadmap)
+5. [License](#license)
+
+## About
+
 Weasel is **the last ORM for Golang you'll ever need.** Built with Generics, so it requires at least Go 1.18+.
 
-1. [Documentation](#documentation)
-2. [API](#api)
-3. [Roadmap](#roadmap)
-4. [License](#license)
+## API
+
+See [The docs](https://go.dev/pkg/github.com/ztcollazo/weasel)
 
 ## Documentation
-
-See [The documentation](https://go.dev/pkg/github.com/ztcollazo/weasel)
-
-## API
 
 Here's an example of the API:
 
