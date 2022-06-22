@@ -14,6 +14,7 @@ import (
 
 var schema = `
 DROP TABLE IF EXISTS person;
+DROP TABLE IF EXISTS friends;
 DROP TABLE IF EXISTS place;
 
 CREATE TABLE person (
@@ -22,6 +23,12 @@ CREATE TABLE person (
     last_name text,
     email text,
 		place_id integer
+);
+
+CREATE TABLE friends (
+	id serial primary key,
+	friender integer,
+	friended integer
 );
 
 CREATE TABLE place (
@@ -33,6 +40,9 @@ CREATE TABLE place (
 
 INSERT INTO person (first_name, last_name, email, place_id) VALUES ('John', 'Doe', 'john@doe.com', 1);
 INSERT INTO person (first_name, last_name, email, place_id) VALUES ('Jane', 'Doe', 'jane@doe.net', 1);
+
+INSERT INTO friends (friender, friended) VALUES (1, 2);
+
 INSERT INTO place (country, city, telcode) VALUES ('United States of America', 'Chicago', 1);`
 
 type PersonSchema struct {
@@ -43,6 +53,7 @@ type PersonSchema struct {
 	Email     string                         `db:"email" type:"text"`
 	PlaceId   int                            `db:"place_id" type:"integer"`
 	Place     weasel.BelongsTo[*PlaceSchema] `belongsto:"place" fk:"id" key:"place_id"`
+	Friends   weasel.HasMany[*PersonSchema]  `hasmany:"person" through:"friends" key:"friender" fk:"friended"`
 	Hello     string
 }
 
@@ -63,7 +74,8 @@ var Person = weasel.Create(conn, &PersonSchema{}, "person")
 
 func (p *PersonSchema) Init() {
 	p.Hello = "world"
-	weasel.UseBelongsTo(p, &Place)
+	weasel.UseBelongsTo(p, Place)
+	weasel.UseHasMany(p, Person)
 	p.Use(use.ValidatePresenceOf[string]("email"))
 	p.Use(use.ValidateFormatOf("email", regexp.MustCompile(`[^@ \t\r\n]+@[^@ \t\r\n]+\.[^@ \t\r\n]+`)))
 	p.Use(use.ValidateUniquenessOf("email"))
@@ -73,7 +85,7 @@ func (p *PersonSchema) Init() {
 }
 
 func (p *PlaceSchema) Init() {
-	weasel.UseHasMany(p, &Person)
+	weasel.UseHasMany(p, Person)
 }
 
 type WeaselTestSuite struct {
@@ -170,7 +182,7 @@ func (s *WeaselTestSuite) TestBelongsTo() {
 	t, err := p.Place()
 	s.assert.Nil(err)
 
-	s.assert.Equal(place, t)
+	s.assert.Equal(place.Id, t.Id)
 }
 
 func (s *WeaselTestSuite) TestHasMany() {
@@ -187,6 +199,17 @@ func (s *WeaselTestSuite) TestHasMany() {
 	s.assert.Equal(person.LastName, t[0].LastName)
 	s.assert.Equal(person.Id, t[0].Id)
 	s.assert.Equal(person.Email, t[0].Email)
+}
+
+func (s *WeaselTestSuite) TestHasManyThrough() {
+	one, err := Person.Find(1)
+	s.assert.Nil(err)
+	d := *one
+	two, err := Person.Find(2)
+	s.assert.Nil(err)
+	friend, err := d.Friends().Find(2)
+	s.assert.Nil(err)
+	s.assert.Equal(two.Id, friend.Id)
 }
 
 func (s *WeaselTestSuite) TestValidatePresence() {
@@ -245,10 +268,10 @@ func (s *WeaselTestSuite) TestValidateCustom() {
 }
 
 func (s *WeaselTestSuite) TestGroup() {
-	p, err := Person.Group("FromUS").All().Exec()
+	p, err := Person.Group("FromUS").Find(1)
 
 	s.assert.Nil(err)
-	s.assert.Equal("John", p[0].FirstName)
+	s.assert.Equal("John", p.FirstName)
 }
 
 func TestWeasel(t *testing.T) {

@@ -35,8 +35,8 @@ type Model[Doc DocumentBase] struct {
 	groups    map[string]whereable
 }
 
-func (m Model[Doc]) Create(d Doc) (Doc, error) {
-	callInit(d, &m)
+func (m *Model[Doc]) Create(d Doc) (Doc, error) {
+	callInit(d, m)
 	if len(d.AllErrors()) > 0 {
 		return d, errors.New("document is invalid")
 	}
@@ -53,7 +53,7 @@ func (m Model[Doc]) Create(d Doc) (Doc, error) {
 	}
 	doc, err := Insert(m).Columns(columns...).Values(values...).Exec()
 	if err == nil {
-		callInit(doc, &m)
+		callInit(doc, m)
 		// And just in case
 		if len(doc.AllErrors()) > 0 {
 			return doc, errors.New("document is invalid")
@@ -63,10 +63,10 @@ func (m Model[Doc]) Create(d Doc) (Doc, error) {
 	return doc, err
 }
 
-func (m Model[Doc]) Find(value any) (Doc, error) {
+func (m *Model[Doc]) Find(value any) (Doc, error) {
 	doc, err := Select([]string{"*"}, m).Where(Eq{m.pk: value}).Exec()
 	if err == nil {
-		callInit(doc, &m)
+		callInit(doc, m)
 		if len(doc.AllErrors()) > 0 {
 			return doc, errors.New("document is invalid")
 		}
@@ -75,10 +75,10 @@ func (m Model[Doc]) Find(value any) (Doc, error) {
 	return doc, err
 }
 
-func (m Model[Doc]) FindBy(name string, value any) (Doc, error) {
+func (m *Model[Doc]) FindBy(name string, value any) (Doc, error) {
 	doc, err := Select([]string{"*"}, m).Where(Eq{name: value}).Exec()
 	if err == nil {
-		callInit(doc, &m)
+		callInit(doc, m)
 		if len(doc.AllErrors()) > 0 {
 			return doc, errors.New("document is invalid")
 		}
@@ -87,22 +87,22 @@ func (m Model[Doc]) FindBy(name string, value any) (Doc, error) {
 	return doc, err
 }
 
-func (m Model[Doc]) All() SelectManyQuery[Doc] {
+func (m *Model[Doc]) All() SelectManyQuery[Doc] {
 	return SelectMany([]string{"*"}, m)
 }
 
-func (m Model[Doc]) CreateGroup(name string, expr whereable) {
+func (m *Model[Doc]) CreateGroup(name string, expr whereable) {
 	m.groups[name] = expr
 }
 
-func (m Model[Doc]) Group(name string) Group[Doc] {
+func (m *Model[Doc]) Group(name string) Group[Doc] {
 	return Group[Doc]{
 		Where: m.groups[name],
 		Model: m,
 	}
 }
 
-func Create[Doc document[Doc]](conn Connection, ex Doc, name string) Model[Doc] {
+func Create[Doc document[Doc]](conn Connection, ex Doc, name string) *Model[Doc] {
 	doc := ex
 	var pk string
 	var relations = map[string]Relation{}
@@ -134,6 +134,8 @@ func Create[Doc document[Doc]](conn Connection, ex Doc, name string) Model[Doc] 
 				}
 				if through, hmt := field.Tag.Lookup("through"); hmt {
 					relation.Through = through
+					relation.Key = or(field.Tag.Get("key"), name+"_id")
+					relation.ForeignKey = or(field.Tag.Get("fk"), hasMany+"_id")
 				}
 				relations["hasMany"+hasMany] = relation
 			} else if hasOne, ho := field.Tag.Lookup("hasone"); ho {
@@ -171,7 +173,7 @@ func Create[Doc document[Doc]](conn Connection, ex Doc, name string) Model[Doc] 
 			fields[name] = f
 		}
 	}
-	model := Model[Doc]{
+	model := &Model[Doc]{
 		Conn:      conn,
 		tableName: name,
 		pk:        pk,
@@ -180,7 +182,7 @@ func Create[Doc document[Doc]](conn Connection, ex Doc, name string) Model[Doc] 
 		relations: relations,
 		groups:    make(map[string]whereable),
 	}
-	doc.Create(doc, &model)
+	doc.Create(doc, model)
 	return model
 }
 

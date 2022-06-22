@@ -1,12 +1,14 @@
 package weasel
 
 import (
+	"reflect"
+
 	sq "github.com/Masterminds/squirrel"
 )
 
 type InsertQuery[Doc DocumentBase] struct {
 	builder sq.InsertBuilder
-	model   Model[Doc]
+	model   *Model[Doc]
 }
 
 func (i InsertQuery[Doc]) Columns(columns ...string) InsertQuery[Doc] {
@@ -25,7 +27,7 @@ func (i InsertQuery[Doc]) Values(values ...any) InsertQuery[Doc] {
 }
 
 func (i InsertQuery[Doc]) Exec() (Doc, error) {
-	ex := i.model.ex
+	ex := clone(i.model.ex, i.model)
 	var id int64
 	if i.model.Conn.driver == "postgres" {
 		i.builder.Suffix("RETURNING id").QueryRow().Scan(&id)
@@ -44,7 +46,7 @@ func (i InsertQuery[Doc]) Exec() (Doc, error) {
 	return ex, err
 }
 
-func Insert[Doc DocumentBase](model Model[Doc]) InsertQuery[Doc] {
+func Insert[Doc DocumentBase](model *Model[Doc]) InsertQuery[Doc] {
 	return InsertQuery[Doc]{
 		builder: model.Conn.Builder.Insert(model.tableName),
 		model:   model,
@@ -53,7 +55,7 @@ func Insert[Doc DocumentBase](model Model[Doc]) InsertQuery[Doc] {
 
 type SelectQuery[Doc DocumentBase] struct {
 	builder sq.SelectBuilder
-	model   Model[Doc]
+	model   *Model[Doc]
 }
 
 func (s SelectQuery[Doc]) Columns(columns ...string) SelectQuery[Doc] {
@@ -143,12 +145,12 @@ func (s SelectQuery[Doc]) Where(pred any, args ...any) SelectQuery[Doc] {
 
 func (s SelectQuery[Doc]) Exec() (Doc, error) {
 	sql, args := s.builder.MustSql()
-	ex := s.model.ex
+	ex := clone(s.model.ex, s.model)
 	err := s.model.Conn.DB.Get(ex, sql, args...)
 	return ex, err
 }
 
-func Select[Doc DocumentBase](columns []string, model Model[Doc]) SelectQuery[Doc] {
+func Select[Doc DocumentBase](columns []string, model *Model[Doc]) SelectQuery[Doc] {
 	return SelectQuery[Doc]{
 		builder: model.Conn.Builder.Select(columns...).From(model.tableName),
 		model:   model,
@@ -157,7 +159,7 @@ func Select[Doc DocumentBase](columns []string, model Model[Doc]) SelectQuery[Do
 
 type SelectManyQuery[Doc DocumentBase] struct {
 	builder sq.SelectBuilder
-	model   Model[Doc]
+	model   *Model[Doc]
 }
 
 func (s SelectManyQuery[Doc]) Columns(columns ...string) SelectManyQuery[Doc] {
@@ -247,17 +249,25 @@ func (s SelectManyQuery[Doc]) Where(pred any, args ...any) SelectManyQuery[Doc] 
 
 func (s SelectManyQuery[Doc]) Exec() ([]Doc, error) {
 	sql, args := s.builder.MustSql()
-	ex := []Doc{s.model.ex}
+	p := clone(s.model.ex, s.model)
+	ex := []Doc{p}
 	err := s.model.Conn.DB.Select(&ex, sql, args...)
 	for _, d := range ex {
-		callInit(d, &s.model)
+		callInit(d, s.model)
 	}
 	return ex, err
 }
 
-func SelectMany[Doc DocumentBase](columns []string, model Model[Doc]) SelectManyQuery[Doc] {
+func SelectMany[Doc DocumentBase](columns []string, model *Model[Doc]) SelectManyQuery[Doc] {
 	return SelectManyQuery[Doc]{
 		builder: model.Conn.Builder.Select(columns...).From(model.tableName),
 		model:   model,
 	}
+}
+
+func clone[Doc DocumentBase](d Doc, m *Model[Doc]) Doc {
+	t := reflect.Indirect(reflect.ValueOf(d)).Type()
+	v := reflect.New(t)
+	v.MethodByName("Create").Call([]reflect.Value{v, reflect.ValueOf(m)})
+	return v.Interface().(Doc)
 }

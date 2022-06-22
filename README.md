@@ -52,7 +52,7 @@ func main() {
   func (p *PersonSchema) Init() {
     p.Hello = "world"
     // Relations, supports: BelongsTo, HasMany (through), HasOne
-    weasel.UseBelongsTo(p, &Place /* pointer to model as second param */)
+    weasel.UseBelongsTo(p, Place)
 
     // The other relations are fairly straightforward:
     // HasOne is basically the same as BelongsTo
@@ -78,7 +78,7 @@ func main() {
 
   // Now for the fun part
   // Types are inferred from the second parameter; it's only there so that we can copy it
-  Person := weasel.Create(conn, &PersonSchema{}, person)
+  Person := weasel.Create(conn, &PersonSchema{}, person) // returns *Model[PersonSchema]
 
   // Done! use it like you would Active Record
   p, _ := Person.Find(1)
