@@ -1,11 +1,12 @@
 package weasel
 
 import (
-	"errors"
 	"reflect"
 
 	"github.com/carlmjohnson/truthy"
 )
+
+type Init[Doc document[Doc]] func(*Model[Doc])
 
 type Field struct {
 	Name       string
@@ -26,83 +27,25 @@ type Relation struct {
 }
 
 type Model[Doc DocumentBase] struct {
+	*Group[Doc]
 	Conn      Connection
 	tableName string
 	pk        string
 	fields    map[string]Field
 	relations map[string]Relation
 	ex        Doc
-	groups    map[string]whereable
+	vals      map[string]any
 }
 
-func (m *Model[Doc]) Create(d Doc) (Doc, error) {
-	callInit(d, m)
-	if len(d.AllErrors()) > 0 {
-		return d, errors.New("document is invalid")
-	}
-	v := reflect.Indirect(reflect.ValueOf(d))
-	columns := make([]string, 0)
-	values := make([]any, 0)
-	for i := 0; i < v.NumField(); i++ {
-		field := v.Field(i)
-		t := v.Type().Field(i)
-		if f, ok := m.fields[t.Tag.Get("db")]; ok && !f.PrimaryKey {
-			columns = append(columns, f.DBName)
-			values = append(values, field.Interface())
-		}
-	}
-	doc, err := Insert(m).Columns(columns...).Values(values...).Exec()
-	if err == nil {
-		callInit(doc, m)
-		// And just in case
-		if len(doc.AllErrors()) > 0 {
-			return doc, errors.New("document is invalid")
-		}
-		return doc, nil
-	}
-	return doc, err
+func (m *Model[Doc]) Set(key string, val any) {
+	m.vals[key] = val
 }
 
-func (m *Model[Doc]) Find(value any) (Doc, error) {
-	doc, err := Select([]string{"*"}, m).Where(Eq{m.pk: value}).Exec()
-	if err == nil {
-		callInit(doc, m)
-		if len(doc.AllErrors()) > 0 {
-			return doc, errors.New("document is invalid")
-		}
-		return doc, nil
-	}
-	return doc, err
+func (m Model[Doc]) Get(key string) any {
+	return m.vals[key]
 }
 
-func (m *Model[Doc]) FindBy(name string, value any) (Doc, error) {
-	doc, err := Select([]string{"*"}, m).Where(Eq{name: value}).Exec()
-	if err == nil {
-		callInit(doc, m)
-		if len(doc.AllErrors()) > 0 {
-			return doc, errors.New("document is invalid")
-		}
-		return doc, nil
-	}
-	return doc, err
-}
-
-func (m *Model[Doc]) All() SelectManyQuery[Doc] {
-	return SelectMany([]string{"*"}, m)
-}
-
-func (m *Model[Doc]) CreateGroup(name string, expr whereable) {
-	m.groups[name] = expr
-}
-
-func (m *Model[Doc]) Group(name string) Group[Doc] {
-	return Group[Doc]{
-		Where: m.groups[name],
-		Model: m,
-	}
-}
-
-func Create[Doc document[Doc]](conn Connection, ex Doc, name string) *Model[Doc] {
+func Create[Doc document[Doc]](conn Connection, ex Doc, name string, inits ...Init[Doc]) *Model[Doc] {
 	doc := ex
 	var pk string
 	var relations = map[string]Relation{}
@@ -180,9 +123,18 @@ func Create[Doc document[Doc]](conn Connection, ex Doc, name string) *Model[Doc]
 		fields:    fields,
 		ex:        doc,
 		relations: relations,
-		groups:    make(map[string]whereable),
+		vals:      make(map[string]any),
+	}
+	model.Group = &Group[Doc]{
+		Model:  model,
+		Where:  Eq{},
+		groups: make(map[string]*Group[Doc]),
+		order:  pk + " ASC",
 	}
 	doc.Create(doc, model)
+	for _, init := range inits {
+		init(model)
+	}
 	return model
 }
 

@@ -78,7 +78,14 @@ func main() {
 
   // Now for the fun part
   // Types are inferred from the second parameter; it's only there so that we can copy it
-  Person := weasel.Create(conn, &PersonSchema{}, person) // returns *Model[PersonSchema]
+  Person := weasel.Create(conn, &PersonSchema{}, "person") // returns *Model[*PersonSchema]
+
+  // Or you can define an init (or multiple) function also
+  Person := weasel.Create(conn, &PersonSchema, "person", func (m *Model[*PersonSchema]) {
+    // You can define properties on the model
+    m.Set("key", "value")
+    m.Get("key") //=> "value"
+  })
 
   // Done! use it like you would Active Record
   p, _ := Person.Find(1)
@@ -102,13 +109,13 @@ func main() {
 
   // You can also do batch queries
   people, _ := Person.All().Where(weasel.Eq{"first_name": "John"}).Limit(3).Offset(6).Exec() // For built queries, make sure that you append exec.
-  // people => []PersonSchema{...}
+  // people => []*PersonSchema{...}
 
   // Or specific queries
   jane := Person.FindBy("first_name", "Jane")
 
   // Now let's get the place
-  jane.Place() //=> PlaceSchema{...}
+  jane.Place() //=> *PlaceSchema{...}
 
   // You can also check if a document is valid
   jane.IsValid() //=> true
@@ -120,9 +127,22 @@ func main() {
   Person.AddGroup("FromUS", weasel.Eq{"place_id": 1})
 
   // And now
-  Person.Group("FromUS").All().Exec() // Supports Find, FindBy, All (with same API)
+  Person.FromGroup("FromUS").All().Exec() // Same API as Model
+  // To learn more about groups, please see below
 }
 ```
+
+### On the topic of Groups
+
+Groups are an extremely valuable feature in ORMs. They allow you to combine documents with similar features, all without having to repeat your queries over and over. Groups in weasel are the foundation of not only themselves, but also models. A few rules:
+
+1. Groups depend on models
+
+Models are what give groups the data about the table itself. This is **not** left to the groups.
+
+2. Models depend on groups
+
+If you look in the code, you will find that `Model[Doc]` actually extends `*Group[Doc]`. This is interesting, because that means that, while models give groups all of the data, groups give models all of the functionality.
 
 ## Roadmap
 
@@ -141,6 +161,11 @@ func main() {
   - [X] Validate Custom
   - [X] Validate Uniqueness
 - [X] Model Groups
+- [X] Model utilities
+  - [X] Find nth document
+  - [X] Find nth to last document
+  - [X] Check if document exists
+  - [X] Count of documents
 
 ...and any that may come up in the future.
 

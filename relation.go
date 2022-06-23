@@ -22,11 +22,15 @@ func UseHasMany[Doc document[Doc], Rel document[Rel]](doc Doc, model *Model[Rel]
 				innerJoin: rel.Through,
 				on:        rel.Through + "." + rel.Key,
 				id:        fmt.Sprint(doc.Get(doc.model().pk)),
+				groups:    make(map[string]*Group[Rel]),
+				order:     model.order,
 			}
 		} else {
 			return Group[Rel]{
-				Where: Eq{rel.ForeignKey: doc.Get(rel.Key)},
-				Model: model,
+				Where:  Eq{rel.ForeignKey: doc.Get(rel.Key)},
+				Model:  model,
+				groups: make(map[string]*Group[Rel]),
+				order:  model.order,
 			}
 		}
 	}

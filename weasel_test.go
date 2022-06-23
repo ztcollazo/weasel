@@ -70,7 +70,9 @@ var conn = weasel.Connect("postgres", "user=ztcollazo dbname=postgres sslmode=di
 
 var Place = weasel.Create(conn, &PlaceSchema{}, "place")
 
-var Person = weasel.Create(conn, &PersonSchema{}, "person")
+var Person = weasel.Create(conn, &PersonSchema{}, "person", func(m *weasel.Model[*PersonSchema]) {
+	m.Set("hello", "world")
+})
 
 func (p *PersonSchema) Init() {
 	p.Hello = "world"
@@ -204,12 +206,47 @@ func (s *WeaselTestSuite) TestHasMany() {
 func (s *WeaselTestSuite) TestHasManyThrough() {
 	one, err := Person.Find(1)
 	s.assert.Nil(err)
-	d := *one
 	two, err := Person.Find(2)
 	s.assert.Nil(err)
-	friend, err := d.Friends().Find(2)
+	friend, err := one.Friends().Find(2)
 	s.assert.Nil(err)
 	s.assert.Equal(two.Id, friend.Id)
+}
+
+func (s *WeaselTestSuite) TestNth() {
+	one, err := Person.Find(1)
+	s.assert.Nil(err)
+	doc, err := Person.Nth(1)
+	s.assert.Nil(err)
+	s.assert.Equal(one.Id, doc.Id)
+}
+
+func (s *WeaselTestSuite) TestNthToLast() {
+	last, err := Place.Find(1)
+	s.assert.Nil(err)
+	doc, err := Place.NthToLast(1)
+	s.assert.Nil(err)
+	s.assert.Equal(last.Id, doc.Id)
+}
+
+func (s *WeaselTestSuite) TestCount() {
+	count, err := Place.Count()
+	s.assert.Nil(err)
+	s.assert.Equal(1, count)
+}
+
+func (s *WeaselTestSuite) TestExists() {
+	ex, err := Person.Exists(2)
+	s.assert.Nil(err)
+	s.assert.True(ex)
+
+	p, err := Place.Exists(2)
+	s.assert.Nil(err)
+	s.assert.False(p)
+}
+
+func (s *WeaselTestSuite) TestModelProps() {
+	s.assert.Equal("world", Person.Get("hello"))
 }
 
 func (s *WeaselTestSuite) TestValidatePresence() {
@@ -268,7 +305,7 @@ func (s *WeaselTestSuite) TestValidateCustom() {
 }
 
 func (s *WeaselTestSuite) TestGroup() {
-	p, err := Person.Group("FromUS").Find(1)
+	p, err := Person.FromGroup("FromUS").Find(1)
 
 	s.assert.Nil(err)
 	s.assert.Equal("John", p.FirstName)
