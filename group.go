@@ -12,6 +12,9 @@ type whereable interface {
 	ToSql() (string, []any, error)
 }
 
+// Group is the foundation on both Model and Group functionality.
+// It has many of the methods used in the model, and contains all of the
+// querying utilities.
 type Group[Doc DocumentBase] struct {
 	Where     whereable
 	Model     *Model[Doc]
@@ -22,6 +25,7 @@ type Group[Doc DocumentBase] struct {
 	order     string
 }
 
+// Find takes the primary key value and finds the corresponding document.
 func (m Group[Doc]) Find(value any) (Doc, error) {
 	stmt := Select([]string{m.Model.tableName + ".*"}, m.Model).Where(m.Where).Where(Eq{m.Model.tableName + "." + m.Model.pk: value})
 	if truthy.Value(m.innerJoin) {
@@ -38,6 +42,8 @@ func (m Group[Doc]) Find(value any) (Doc, error) {
 	return doc, err
 }
 
+// FindBy takes a column name and value and finds the corresponding document.
+// If you want to find multiple, use All().Where(weasel.Eq{key: value}).
 func (m Group[Doc]) FindBy(name string, value any) (Doc, error) {
 	stmt := Select([]string{"*"}, m.Model).Where(m.Where).Where(Eq{name: value})
 	if truthy.Value(m.innerJoin) {
@@ -54,6 +60,9 @@ func (m Group[Doc]) FindBy(name string, value any) (Doc, error) {
 	return doc, err
 }
 
+// All returns all of the documents in the group or model.
+// It returns a query builder that contains functions including Where, OrderBy, GroupBy.
+// For more information and functions, see SelectManyQuery and its methods.
 func (m Group[Doc]) All() SelectManyQuery[Doc] {
 	stmt := SelectMany([]string{"*"}, m.Model).Where(m.Where).OrderBy(m.order)
 	if truthy.Value(m.innerJoin) {
@@ -92,6 +101,9 @@ func (m Group[Doc]) Create(d Doc) (Doc, error) {
 	return doc, err
 }
 
+// CreateGroup adds a group to the model or group that can be accessed by FromGroup.
+// It respects the current group's where clause and contains all of the querying functionality
+// and utilities.
 func (m *Group[Doc]) CreateGroup(name string, expr whereable) {
 	m.groups[name] = &Group[Doc]{
 		Where:  And{m.Where, expr},
@@ -100,54 +112,76 @@ func (m *Group[Doc]) CreateGroup(name string, expr whereable) {
 	}
 }
 
+// FromGroup returns the group that the name parameter points to.
+// See CreateGroup() and Group for more information.
 func (m Group[Doc]) FromGroup(name string) *Group[Doc] {
 	return m.groups[name]
 }
 
+// Count returns the number of documents in the group or model.
 func (m Group[Doc]) Count() (int, error) {
 	var cnt int
 	err := m.Model.Conn.Builder.Select("COUNT(*)").From(m.Model.tableName).Where(m.Where).Scan(&cnt)
 	return cnt, err
 }
 
+// Exists checks if the document with the given primary key exists.
 func (m Group[Doc]) Exists(id any) (bool, error) {
 	var cnt int
-	err := m.Model.Conn.Builder.Select("COUNT(*)").From(m.Model.tableName).Where(m.Where).Where(Eq{m.Model.pk: id}).Scan(&cnt)
+	err := m.Model.Conn.Builder.Select("COUNT(1)").From(m.Model.tableName).Where(m.Where).Where(Eq{m.Model.pk: id}).Scan(&cnt)
 	return cnt != 0, err
 }
 
+// Order sets the order that the documents should be sorted by when queried.
 func (m *Group[Doc]) Order(by string) {
 	m.order = by
 }
 
+// First returns the first document from the table, via the set order clause.
+// See Nth for more information.
 func (m Group[Doc]) First() (Doc, error) {
 	return m.Nth(1)
 }
 
+// Second returns the second document.
+// See Nth for more information.
 func (m Group[Doc]) Second() (Doc, error) {
 	return m.Nth(2)
 }
 
+// Third returns the third document.
+// See Nth for more information.
 func (m Group[Doc]) Third() (Doc, error) {
 	return m.Nth(3)
 }
 
+// Fourth returns the fourth document.
+// See Nth for more information.
 func (m Group[Doc]) Fourth() (Doc, error) {
 	return m.Nth(4)
 }
 
+// Fifth returns the fifth document.
+// See Nth for more information.
 func (m Group[Doc]) Fifth() (Doc, error) {
 	return m.Nth(5)
 }
 
+// Last returns the last document in the table, via the opposite of order.
+// See NthToLast for more information.
 func (m Group[Doc]) Last() (Doc, error) {
 	return m.NthToLast(1)
 }
 
+// SecondToLast returns the second to last document in the table.
+// See NthToLast for more information.
 func (m Group[Doc]) SecondToLast() (Doc, error) {
 	return m.NthToLast(2)
 }
 
+// NthToLast returns the last document at the given index.
+// For example:
+//	Person.NthToLast(3) // Returns the third to last document.
 func (m Group[Doc]) NthToLast(id int) (Doc, error) {
 	var order string
 	if strings.Contains(m.order, "ASC") {
@@ -158,6 +192,9 @@ func (m Group[Doc]) NthToLast(id int) (Doc, error) {
 	return Select([]string{"*"}, m.Model).Where(m.Where).Limit(1).OrderBy(order).Offset(uint64(id - 1)).Exec()
 }
 
+// Nth returns the document at the given index.
+// For example:
+//	Person.Nth(6) // Returns the sixth document.
 func (m Group[Doc]) Nth(id int) (Doc, error) {
 	return Select([]string{"*"}, m.Model).Where(m.Where).Limit(1).Offset(uint64(id - 1)).Exec()
 }

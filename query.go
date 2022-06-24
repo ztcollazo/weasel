@@ -6,6 +6,10 @@ import (
 	sq "github.com/Masterminds/squirrel"
 )
 
+// InsertQuery builds an insert sql query.
+// See squirrel's docs for some of the functions.
+// Note: InsertQuery does not include all of squirrel's functions.
+// It handles some of the internally.
 type InsertQuery[Doc DocumentBase] struct {
 	builder sq.InsertBuilder
 	model   *Model[Doc]
@@ -46,6 +50,8 @@ func (i InsertQuery[Doc]) Exec() (Doc, error) {
 	return ex, err
 }
 
+// Insert takes a model and builds an insert query. You can set the columns and values.
+// Finally, call Exec() to run the query.
 func Insert[Doc DocumentBase](model *Model[Doc]) InsertQuery[Doc] {
 	return InsertQuery[Doc]{
 		builder: model.Conn.Builder.Insert(model.tableName),
@@ -53,6 +59,10 @@ func Insert[Doc DocumentBase](model *Model[Doc]) InsertQuery[Doc] {
 	}
 }
 
+// SelectQuery builds an select sql query.
+// See squirrel's docs for some of the functions.
+// Note: SelectQuery does not include all of squirrel's functions.
+// It handles some of the internally.
 type SelectQuery[Doc DocumentBase] struct {
 	builder sq.SelectBuilder
 	model   *Model[Doc]
@@ -150,6 +160,9 @@ func (s SelectQuery[Doc]) Exec() (Doc, error) {
 	return ex, err
 }
 
+// Select starts a select one query. It handles the internal table and column logic.
+// You can pass the columns and model. When you are done building the query,
+// call the Exec() function to run it.
 func Select[Doc DocumentBase](columns []string, model *Model[Doc]) SelectQuery[Doc] {
 	return SelectQuery[Doc]{
 		builder: model.Conn.Builder.Select(columns...).From(model.tableName),
@@ -157,6 +170,10 @@ func Select[Doc DocumentBase](columns []string, model *Model[Doc]) SelectQuery[D
 	}
 }
 
+// SelectManyQuery builds an select sql query.
+// See squirrel's docs for some of the functions.
+// Note: SelectManyQuery does not include all of squirrel's functions.
+// It handles some of the internally.
 type SelectManyQuery[Doc DocumentBase] struct {
 	builder sq.SelectBuilder
 	model   *Model[Doc]
@@ -258,6 +275,9 @@ func (s SelectManyQuery[Doc]) Exec() ([]Doc, error) {
 	return ex, err
 }
 
+// SelectMany builds a select query. Pass in the columns and model,
+// and when you are done building the query, call the Exec() function
+// to run it.
 func SelectMany[Doc DocumentBase](columns []string, model *Model[Doc]) SelectManyQuery[Doc] {
 	return SelectManyQuery[Doc]{
 		builder: model.Conn.Builder.Select(columns...).From(model.tableName),

@@ -7,6 +7,9 @@ import (
 	"github.com/carlmjohnson/truthy"
 )
 
+// DocumentBase provides an interface to be used for times when you may not know the schema
+// type. All documents conform to it; it is used as the constraint for type parameters. You
+// may find yourself using DocumentBase if you want to write custom validation and middleware.
 type DocumentBase interface {
 	Delete() error
 	Save() error
@@ -32,6 +35,12 @@ type document[Doc DocumentBase] interface {
 	model() *Model[Doc]
 }
 
+// Document provides a struct to extend your schemas. It contains errors and model information and
+// extends DocumentBase. You typically will not have to use Document except for in defining your schema,
+// for example:
+//	type PersonSchema struct {
+//		weasel.Document[*PersonSchema]
+//	}
 type Document[Doc document[Doc]] struct {
 	document[Doc]
 	Model  *Model[Doc]
@@ -41,6 +50,8 @@ type Document[Doc document[Doc]] struct {
 	use    func(Middleware)
 }
 
+// Middleware is a type that all middleware (passed to the Use function) should be/return.
+// it takes an argument in DocumentBase and can use `Get` and `Set` to get and change properties.
 type Middleware func(DocumentBase)
 
 // This is an internal function, exported only for use with reflect
@@ -53,6 +64,7 @@ func (d *Document[Doc]) Create(doc Doc, model *Model[Doc]) {
 	d.use = use(doc)
 }
 
+// Use takes middleware and runs it on document creation.
 func (d *Document[Doc]) Use(m Middleware) {
 	d.use(m)
 }
@@ -64,51 +76,64 @@ func (d Document[Doc]) model() *Model[Doc] {
 	return d.Model
 }
 
+// AllErrors returns all of the document's errors.
 func (d Document[Doc]) AllErrors() []error {
 	return d.Errors
 }
 
+// You can use AddError to append an error to the list. This is very useful in middleware.
 func (d *Document[Doc]) AddError(es error) {
 	d.Errors = append(d.Errors, es)
 }
 
+// SetErrors completely sets all of the errors. It is not recommended to use unless you
+// really need to or want to reset all of the errors.
 func (d *Document[Doc]) SetErrors(errs []error) {
 	d.Errors = errs
 }
 
+// RemoveError takes the index of an error and removes it from the list.
 func (d *Document[Doc]) RemoveError(id int) {
 	d.Errors = append(d.Errors[:id], d.Errors[id+1:]...)
 }
 
+// Error returns the error at the given ID.
 func (d Document[Doc]) Error(id int) error {
 	return d.Errors[id]
 }
 
+// PrimaryKey returns the table's primary key. This is useful for middleware.
 func (d Document[Doc]) PrimaryKey() string {
 	return d.Model.pk
 }
 
+// Table returns the table name of the document. This is useful for middleware.
 func (d Document[Doc]) Table() string {
 	return d.Model.tableName
 }
 
+// Conn returns the current connection. See the connection docs.
 func (d Document[Doc]) Conn() Connection {
 	return d.Model.Conn
 }
 
+// Get returns a property (DB or struct) on the document. You may need to use type assertion.
 func (d Document[Doc]) Get(name string) any {
 	return d.get(name)
 }
 
+// Set sets a property on the document (DB or struct).
 func (d Document[Doc]) Set(name string, value any) {
 	d.set(name, value)
 }
 
+// Delete completely removes the document from the database.
 func (d Document[Doc]) Delete() error {
 	_, err := d.Model.Conn.Builder.Delete(d.Model.tableName).Where(Eq{d.Model.pk: d.Get(d.Model.pk)}).Exec()
 	return err
 }
 
+// Save saves the document's changes, changed either by Set or manually.
 func (d Document[Doc]) Save() error {
 	callInit(&d)
 	if len(d.Errors) > 0 {
@@ -123,11 +148,13 @@ func (d Document[Doc]) Save() error {
 	return err
 }
 
+// IsValid checks that the document does not contain any errors.
 func (d Document[Doc]) IsValid() bool {
 	callInit(&d)
 	return len(d.Errors) <= 0
 }
 
+// IsInvalid checks if the document has any errors.
 func (d Document[Doc]) IsInvalid() bool {
 	return !d.IsValid()
 }

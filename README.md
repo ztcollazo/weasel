@@ -129,6 +129,15 @@ func main() {
   // And now
   Person.FromGroup("FromUS").All().Exec() // Same API as Model
   // To learn more about groups, please see below
+
+  // You can do many other useful features such as:
+  Person.Exists(1)
+  Person.First() // Up to fifth
+  Person.Last() // up to second
+  Person.Nth(7)
+  Person.NthFromLast(3)
+  // To change to order of the documents, you can do:
+  Person.Order("first_name DESC") // Etc.
 }
 ```
 

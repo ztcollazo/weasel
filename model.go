@@ -6,8 +6,11 @@ import (
 	"github.com/carlmjohnson/truthy"
 )
 
+// Type Init represents the init function passed to Create
 type Init[Doc document[Doc]] func(*Model[Doc])
 
+// Type field represents the field structure used internally for field metadata,
+// provided by struct tags.
 type Field struct {
 	Name       string
 	DBName     string
@@ -17,6 +20,7 @@ type Field struct {
 	PrimaryKey bool
 }
 
+// Type relation represents a relation's metadata, provided by struct tags.
 type Relation struct {
 	Name       string
 	Variant    string
@@ -26,6 +30,8 @@ type Relation struct {
 	Through    string
 }
 
+// Model is the model itself. It extends Group and has all of Group's functionality, and more.
+// It also provides the table metadata to Group.
 type Model[Doc DocumentBase] struct {
 	*Group[Doc]
 	Conn      Connection
@@ -37,14 +43,17 @@ type Model[Doc DocumentBase] struct {
 	vals      map[string]any
 }
 
+// Set sets a value on the model.
 func (m *Model[Doc]) Set(key string, val any) {
 	m.vals[key] = val
 }
 
+// Get returns a value set by Set.
 func (m Model[Doc]) Get(key string) any {
 	return m.vals[key]
 }
 
+// Create creates a model from the given connection, document, table name, and initializers.
 func Create[Doc document[Doc]](conn Connection, ex Doc, name string, inits ...Init[Doc]) *Model[Doc] {
 	doc := ex
 	var pk string
