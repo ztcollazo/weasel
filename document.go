@@ -26,13 +26,13 @@ type DocumentBase interface {
 	IsInvalid() bool
 	Table() string
 	Conn() Connection
+	Use(Middleware)
 }
 
 type document[Doc DocumentBase] interface {
 	DocumentBase
 	Create(Doc, *Model[Doc])
-	Use(Middleware)
-	model() *Model[Doc]
+	GetModel() *Model[Doc]
 }
 
 // Document provides a struct to extend your schemas. It contains errors and model information and
@@ -72,7 +72,7 @@ func (d *Document[Doc]) Use(m Middleware) {
 // You can define a custom Init function to run on document creation.
 func (d Document[Doc]) Init() {}
 
-func (d Document[Doc]) model() *Model[Doc] {
+func (d Document[Doc]) GetModel() *Model[Doc] {
 	return d.Model
 }
 
@@ -162,8 +162,8 @@ func (d Document[Doc]) IsInvalid() bool {
 func get[Doc document[Doc]](d Doc) func(string) any {
 	v := reflect.Indirect(reflect.ValueOf(d))
 	return func(name string) any {
-		if truthy.Value(d.model().fields[name]) {
-			return v.FieldByName(d.model().fields[name].Name).Interface()
+		if truthy.Value(d.GetModel().fields[name]) {
+			return v.FieldByName(d.GetModel().fields[name].Name).Interface()
 		} else if v.IsValid() && v.CanInterface() {
 			return v.FieldByName(name).Interface()
 		} else {
@@ -176,7 +176,7 @@ func set[Doc document[Doc]](d Doc) func(string, any) {
 	v := reflect.Indirect(reflect.ValueOf(&d)).Elem()
 	return func(name string, value any) {
 		n := reflect.ValueOf(value)
-		field := d.model().fields[name]
+		field := d.GetModel().fields[name]
 		if truthy.Value(field) {
 			v.FieldByName(field.Name).Set(n)
 		} else {

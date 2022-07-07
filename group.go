@@ -137,6 +137,11 @@ func (m *Group[Doc]) Order(by string) {
 	m.order = by
 }
 
+// Get order returns the order of the documents used when queried, for example "id ASC"
+func (m *Group[Doc]) GetOrder() string {
+	return m.order
+}
+
 // First returns the first document from the table, via the set order clause.
 // See Nth for more information.
 func (m Group[Doc]) First() (Doc, error) {

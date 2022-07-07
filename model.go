@@ -53,6 +53,16 @@ func (m Model[Doc]) Get(key string) any {
 	return m.vals[key]
 }
 
+// Relations returns the map of relations used internally by weasel.
+func (m Model[Doc]) Relations() map[string]Relation {
+	return m.relations
+}
+
+// Name returns the table name of the model.
+func (m Model[Doc]) Name() string {
+	return m.tableName
+}
+
 // Create creates a model from the given connection, document, table name, and initializers.
 func Create[Doc document[Doc]](conn Connection, ex Doc, name string, inits ...Init[Doc]) *Model[Doc] {
 	doc := ex

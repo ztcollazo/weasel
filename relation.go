@@ -30,25 +30,24 @@ type HasOne[Doc document[Doc]] func(...Doc) (Doc, error)
 // Use has many populates the field that returns the has many relationship, specified in the schema.
 // It takes a document and the model that the document has many of.
 func UseHasMany[Doc document[Doc], Rel document[Rel]](doc Doc, model *Model[Rel]) {
-	rel := doc.model().relations["hasMany"+model.tableName]
+	rel := doc.GetModel().Relations()["hasMany"+model.Name()]
 	var fn HasMany[Rel] = func(d ...Rel) Group[Rel] {
 		if rel.Through != "" {
-			where := Eq{}
 			return Group[Rel]{
 				Model:     model,
-				Where:     where,
+				Where:     Eq{},
 				innerJoin: rel.Through,
 				on:        rel.Through + "." + rel.Key,
-				id:        fmt.Sprint(doc.Get(doc.model().pk)),
+				id:        fmt.Sprint(doc.Get(doc.PrimaryKey())),
 				groups:    make(map[string]*Group[Rel]),
-				order:     model.order,
+				order:     model.GetOrder(),
 			}
 		} else {
 			return Group[Rel]{
 				Where:  Eq{rel.ForeignKey: doc.Get(rel.Key)},
 				Model:  model,
 				groups: make(map[string]*Group[Rel]),
-				order:  model.order,
+				order:  model.GetOrder(),
 			}
 		}
 	}
@@ -58,7 +57,7 @@ func UseHasMany[Doc document[Doc], Rel document[Rel]](doc Doc, model *Model[Rel]
 // UseBelongsTo populates the field that returns the belongs to relationship, specified in the schema.
 // It takes a document and the model that the document belongs to.
 func UseBelongsTo[Doc document[Doc], Rel document[Rel]](doc Doc, model *Model[Rel]) {
-	rel := doc.model().relations["belongsTo"+model.tableName]
+	rel := doc.GetModel().Relations()["belongsTo"+model.Name()]
 	var fn BelongsTo[Rel] = func(d ...Rel) (Rel, error) {
 		e, err := Select([]string{"*"}, model).Where(Eq{rel.ForeignKey: doc.Get(rel.Key)}).Exec()
 		if err == nil {
@@ -76,7 +75,7 @@ func UseBelongsTo[Doc document[Doc], Rel document[Rel]](doc Doc, model *Model[Re
 // UseHasOne populates the field that returns the has one relationship, specified in the schema.
 // it takes a document and the model that the document has one of.
 func UseHasOne[Doc document[Doc], Rel document[Rel]](doc Doc, model *Model[Rel]) {
-	rel := doc.model().relations["hasOne"+model.tableName]
+	rel := doc.GetModel().Relations()["hasOne"+model.Name()]
 	var fn HasOne[Rel] = func(d ...Rel) (Rel, error) {
 		e, err := Select([]string{"*"}, model).Where(Eq{rel.ForeignKey: doc.Get(rel.Key)}).Exec()
 		if err == nil {
