@@ -138,6 +138,12 @@ func main() {
   Person.NthFromLast(3)
   // To change to order of the documents, you can do:
   Person.Order("first_name DESC") // Etc.
+
+  // You can also serialize documents:
+  p, _ := Person.First()
+  json, _ := Person.ToJSON()
+  // Or for custom serialization:
+  mp := p.ToMap() // Creates a map of all of the fields
 }
 ```
 
@@ -175,6 +181,7 @@ If you look in the code, you will find that `Model[Doc]` actually extends `*Grou
   - [X] Find nth to last document
   - [X] Check if document exists
   - [X] Count of documents
+  - [X] Serialize documents
 
 ...and any that may come up in the future.
 

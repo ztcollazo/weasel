@@ -1,6 +1,7 @@
 package weasel
 
 import (
+	"encoding/json"
 	"errors"
 	"reflect"
 
@@ -13,6 +14,8 @@ import (
 type DocumentBase interface {
 	Delete() error
 	Save() error
+	ToJSON() (string, error)
+	ToMap() map[string]any
 	Get(string) any
 	Set(string, any)
 	AllErrors() []error
@@ -62,6 +65,24 @@ func (d *Document[Doc]) Create(doc Doc, model *Model[Doc]) {
 	d.get = get(doc)
 	d.set = set(doc)
 	d.use = use(doc)
+}
+
+// ToJSON returns a JSON string of all of the document's fields.
+// This is useful for serialization in HTTP responses.
+func (d Document[Doc]) ToJSON() (string, error) {
+	mp := d.ToMap()
+	b, err := json.Marshal(mp)
+	return string(b), err
+}
+
+// ToMap returns a map of the document.
+// This is useful for custom serialization.
+func (d Document[Doc]) ToMap() map[string]any {
+	mp := make(map[string]any)
+	for f := range d.Model.fields {
+		mp[f] = d.Get(f)
+	}
+	return mp
 }
 
 // Use takes middleware and runs it on document creation.

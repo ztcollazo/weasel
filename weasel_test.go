@@ -1,6 +1,7 @@
 package weasel_test
 
 import (
+	"encoding/json"
 	"errors"
 	"regexp"
 	"testing"
@@ -309,6 +310,29 @@ func (s *WeaselTestSuite) TestGroup() {
 
 	s.assert.Nil(err)
 	s.assert.Equal("John", p.FirstName)
+}
+
+func (s *WeaselTestSuite) TestJSON() {
+	p, err := Person.First()
+	s.assert.Nil(err)
+
+	j, err := p.ToJSON()
+	s.assert.Nil(err)
+
+	mp := make(map[string]any)
+	err = json.Unmarshal([]byte(j), &mp)
+	s.assert.Nil(err)
+	s.assert.Equal(1, int(mp["id"].(float64)))
+	s.assert.Equal("John", mp["first_name"])
+}
+
+func (s *WeaselTestSuite) TestMap() {
+	p, err := Person.First()
+	s.assert.Nil(err)
+
+	m := p.ToMap()
+	s.assert.Equal(1, m["id"])
+	s.assert.Equal("John", m["first_name"])
 }
 
 func TestWeasel(t *testing.T) {
