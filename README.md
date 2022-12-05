@@ -182,6 +182,10 @@ If you look in the code, you will find that `Model[Doc]` actually extends `*Grou
   - [X] Check if document exists
   - [X] Count of documents
   - [X] Serialize documents
+- [ ] CLI?
+  - [ ] Create model files
+  - [ ] Migrations?
+- [ ] Better config format
 
 ...and any that may come up in the future.
 
