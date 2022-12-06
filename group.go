@@ -25,6 +25,18 @@ type Group[Doc DocumentBase] struct {
 	order     string
 }
 
+func NewGroupWith[Doc DocumentBase](where whereable, model *Model[Doc], innerJoin, on, id, order string, groups map[string]*Group[Doc]) *Group[Doc] {
+	return &Group[Doc]{
+		Where:     where,
+		Model:     model,
+		innerJoin: innerJoin,
+		on:        on,
+		id:        id,
+		order:     order,
+		groups:    groups,
+	}
+}
+
 // Find takes the primary key value and finds the corresponding document.
 func (m Group[Doc]) Find(value any) (Doc, error) {
 	stmt := Select([]string{m.Model.tableName + ".*"}, m.Model).Where(m.Where).Where(Eq{m.Model.tableName + "." + m.Model.pk: value})
@@ -186,6 +198,7 @@ func (m Group[Doc]) SecondToLast() (Doc, error) {
 
 // NthToLast returns the last document at the given index.
 // For example:
+//
 //	Person.NthToLast(3) // Returns the third to last document.
 func (m Group[Doc]) NthToLast(id int) (Doc, error) {
 	var order string
@@ -199,6 +212,7 @@ func (m Group[Doc]) NthToLast(id int) (Doc, error) {
 
 // Nth returns the document at the given index.
 // For example:
+//
 //	Person.Nth(6) // Returns the sixth document.
 func (m Group[Doc]) Nth(id int) (Doc, error) {
 	return Select([]string{"*"}, m.Model).Where(m.Where).Limit(1).Offset(uint64(id - 1)).Exec()

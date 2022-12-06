@@ -14,7 +14,7 @@ Weasel is **the last ORM for Golang you'll ever need.** Built with Generics, so 
 
 ## API
 
-See [The docs](https://go.dev/pkg/github.com/ztcollazo/weasel)
+See [the docs](https://go.dev/pkg/github.com/ztcollazo/weasel)
 
 ## Documentation
 
@@ -51,19 +51,21 @@ func main() {
   // Again, the method MUST have a pointer receiver.
   func (p *PersonSchema) Init() {
     p.Hello = "world"
-    // Relations, supports: BelongsTo, HasMany (through), HasOne
-    weasel.UseBelongsTo(p, Place)
+    // Relations, supports: BelongsTo, HasMany (and through), HasOne
+    // Note: This format has been changed.
+    // Old: weasel.UseBelongsTo(p, Place)
+    p.Use(use.BelongsTo[*PersonSchema](Place))
 
     // The other relations are fairly straightforward:
     // HasOne is basically the same as BelongsTo
     // HasMany is a Group (see below)
     // HasMany through is slightly different
-    // In that case, you would still use the UseHasMany function
+    // In that case, you would still use the HasMany function
     // But in the schema, you would add a `through` tag
     // with the intermittent model
 
 
-    // this is where you would do your validations
+    // this is also where you would do your validations
     // d.Errors is an []error
     if p.FirstName == "" {
       p.AddError(errors.New("missing first name"))

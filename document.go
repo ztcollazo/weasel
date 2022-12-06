@@ -41,6 +41,7 @@ type document[Doc DocumentBase] interface {
 // Document provides a struct to extend your schemas. It contains errors and model information and
 // extends DocumentBase. You typically will not have to use Document except for in defining your schema,
 // for example:
+//
 //	type PersonSchema struct {
 //		weasel.Document[*PersonSchema]
 //	}

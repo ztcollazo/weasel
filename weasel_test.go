@@ -77,8 +77,12 @@ var Person = weasel.Create(conn, &PersonSchema{}, "person", func(m *weasel.Model
 
 func (p *PersonSchema) Init() {
 	p.Hello = "world"
-	weasel.UseBelongsTo(p, Place)
-	weasel.UseHasMany(p, Person)
+	// Deprecated:
+	//
+	//	weasel.UseBelongsTo(p, Place)
+	//	weasel.UseHasMany(p, Person)
+	p.Use(use.HasMany[*PersonSchema](Person))
+	p.Use(use.BelongsTo[*PersonSchema](Place))
 	p.Use(use.ValidatePresenceOf[string]("email"))
 	p.Use(use.ValidateFormatOf("email", regexp.MustCompile(`[^@ \t\r\n]+@[^@ \t\r\n]+\.[^@ \t\r\n]+`)))
 	p.Use(use.ValidateUniquenessOf("email"))
@@ -88,7 +92,10 @@ func (p *PersonSchema) Init() {
 }
 
 func (p *PlaceSchema) Init() {
-	weasel.UseHasMany(p, Person)
+	// Deprecated:
+	//
+	//	weasel.UseHasMany(p, Person)
+	p.Use(use.HasMany[*PlaceSchema](Person))
 }
 
 type WeaselTestSuite struct {
