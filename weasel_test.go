@@ -86,6 +86,7 @@ func (p *PersonSchema) Init() {
 	p.Use(use.ValidatePresenceOf[string]("email"))
 	p.Use(use.ValidateFormatOf("email", regexp.MustCompile(`[^@ \t\r\n]+@[^@ \t\r\n]+\.[^@ \t\r\n]+`)))
 	p.Use(use.ValidateUniquenessOf("email"))
+	p.Use(use.ValidateUniqueCombination("first_name", "last_name"))
 	p.Use(use.Validate("email", func(val string) bool {
 		return val != "random@email.com"
 	}))
@@ -294,6 +295,20 @@ func (s *WeaselTestSuite) TestValidateUniqueness() {
 
 	s.assert.Equal(errors.New("document is invalid"), err)
 	s.assert.True(contains(p.Errors, errors.New("value john@doe.com for field email is not unique")))
+	s.assert.False(p.IsValid())
+	s.assert.True(p.IsInvalid())
+}
+
+func (s *WeaselTestSuite) TestValidateUniqueCombination() {
+	p, err := Person.Create(&PersonSchema{
+		FirstName: "John",
+		LastName:  "Doe",
+		Email:     "johndoe@example.com",
+		PlaceId:   1,
+	})
+
+	s.assert.Equal(errors.New("document is invalid"), err)
+	s.assert.True(contains(p.Errors, errors.New("combination of values [John Doe] for fields [first_name last_name] is not unique")))
 	s.assert.False(p.IsValid())
 	s.assert.True(p.IsInvalid())
 }

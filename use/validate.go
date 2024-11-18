@@ -10,6 +10,7 @@ import (
 
 // ValidatePresenceOf takes a type parameter of the data type of the field and the field itself,
 // and checks that the field exists in the record.
+//
 //	doc.Use(use.ValidatePresenceOf[string]("email"))
 func ValidatePresenceOf[T any](field string) weasel.Middleware {
 	return func(d weasel.DocumentBase) {
@@ -21,8 +22,9 @@ func ValidatePresenceOf[T any](field string) weasel.Middleware {
 
 // Validate takes a field and a function with a parameter as the value of that field returning a bool.
 // It makes sure that the value satisfies the function, or else it adds an error to the model.
+//
 //	doc.Use(use.Validate("email", func (email string) bool {
-// 		return email != "some@thing.com"
+//		return email != "some@thing.com"
 //	}))
 func Validate[T any](field string, validator func(val T) bool) weasel.Middleware {
 	return func(d weasel.DocumentBase) {
@@ -37,6 +39,7 @@ func Validate[T any](field string, validator func(val T) bool) weasel.Middleware
 // For example, the query would look like: SELECT COUNT(*) FROM table WHERE id = id AND id != id;
 //
 // Use autoincrement or validate their uniqueness internally.
+//
 //	doc.Use(use.ValidateUniquenessOf("email"))
 func ValidateUniquenessOf(field string) weasel.Middleware {
 	return func(d weasel.DocumentBase) {
@@ -57,7 +60,43 @@ func ValidateUniquenessOf(field string) weasel.Middleware {
 	}
 }
 
+// ValidateUniqueCombination checks that the combination of fields is unique in the DB.
+//
+//	doc.Use(use.ValidateUniqueCombination("friend_id", "friender_id"))
+func ValidateUniqueCombination(field1, field2 string, fields ...string) weasel.Middleware {
+	return func(d weasel.DocumentBase) {
+		var count int
+
+		where := weasel.And{weasel.NotEq{d.PrimaryKey(): d.Get(d.PrimaryKey())}, weasel.Eq{field1: d.Get(field1)}, weasel.Eq{field2: d.Get(field2)}}
+
+		for _, field := range fields {
+			where = append(where, weasel.Eq{field: d.Get(field)})
+		}
+
+		err := d.Conn().Builder.Select("COUNT(*)").
+			From(d.Table()).
+			Where(where).
+			QueryRow().
+			Scan(&count)
+
+		if err != nil {
+			d.AddError(err)
+		}
+
+		if count > 0 {
+			values := make([]any, 0)
+			values = append(values, d.Get(field1), d.Get(field2))
+			for _, field := range fields {
+				values = append(values, d.Get(field))
+			}
+
+			d.AddError(fmt.Errorf("combination of values %v for fields %v is not unique", values, append([]string{field1, field2}, fields...)))
+		}
+	}
+}
+
 // ValidateFormatOf takes a regular expression and checks that the field matches the pattern.
+//
 //	doc.Use(use.ValidateFormatOf("email", regexp.MustCompile(`[^@ \t\r\n]+@[^@ \t\r\n]+\.[^@ \t\r\n]+`)))
 func ValidateFormatOf(field string, format *regexp.Regexp) weasel.Middleware {
 	return func(d weasel.DocumentBase) {

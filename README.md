@@ -73,9 +73,10 @@ func main() {
     // or
     p.Use(use.ValidatePresenceOf[string /* validate presence requires data type */]("first_name"))
     // Also supports:
-    // Custom: Validates(field, func(val type) bool)
-    // Unique: ValidatesUniquenessOf(field)
-    // Format: ValidatesFormatOf(field, regexp)
+    // Custom: Validate(field, func(val type) bool)
+    // Unique: ValidateUniquenessOf(field)
+    // Unique Combination: ValidateUniqueCombination(...fields)
+    // Format: ValidateFormatOf(field, regexp)
   }
 
   // Now for the fun part
@@ -153,13 +154,13 @@ func main() {
 
 Groups are an extremely valuable feature in ORMs. They allow you to combine documents with similar features, all without having to repeat your queries over and over. Groups in weasel are the foundation of not only themselves, but also models. A few rules:
 
-1. Groups depend on models
+1. **Groups depend on models**
 
-Models are what give groups the data about the table itself. This is **not** left to the groups.
+   Models are what give groups the data about the table itself. This is **not** left to the groups.
 
-2. Models depend on groups
+2. **Models depend on groups**
 
-If you look in the code, you will find that `Model[Doc]` actually extends `*Group[Doc]`. This is interesting, because that means that, while models give groups all of the data, groups give models all of the functionality.
+   If you look in the code, you will find that `Model[Doc]` actually extends `*Group[Doc]`. This is interesting, because that means that, while models give groups all of the data, groups give models all of the functionality.
 
 ## Roadmap
 
@@ -187,7 +188,7 @@ If you look in the code, you will find that `Model[Doc]` actually extends `*Grou
 - [ ] CLI?
   - [ ] Create model files
   - [ ] Migrations?
-- [ ] Better config format
+- [ ] ~~Better config format~~ Many drivers include their own structs that you can format into an opts string for a better UX.
 
 ...and any that may come up in the future.
 
