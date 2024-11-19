@@ -67,7 +67,10 @@ type PlaceSchema struct {
 	People  weasel.HasMany[*PersonSchema] `hasmany:"person" fk:"place_id" key:"id"`
 }
 
-var conn = weasel.Connect("postgres", "user=ztcollazo dbname=postgres sslmode=disable")
+var conn = weasel.Connect("postgres", weasel.Opts{
+	User:     "ztcollazo",
+	Database: "postgres",
+})
 
 var Place = weasel.Create(conn, &PlaceSchema{}, "place")
 

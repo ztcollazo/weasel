@@ -30,8 +30,11 @@ import (
 )
 
 func main() {
-  // Connect is a wrapper around SQLX's connect; see that for more details.
-  conn := weasel.Connect("postgres", "user=foo dbname=bar sslmode=off")
+  // Connect is a wrapper around SQLX's connect that takes a custom Opts strcut; see that for more details.
+  conn := weasel.Connect("postgres", weasel.Opts{
+    Database: "postgres",
+    User: "whoever",
+  })
 
   // Let's create the schema now
   type PersonSchema struct {
@@ -188,7 +191,7 @@ Groups are an extremely valuable feature in ORMs. They allow you to combine docu
 - [ ] CLI?
   - [ ] Create model files
   - [ ] Migrations?
-- [ ] ~~Better config format~~ Many drivers include their own structs that you can format into an opts string for a better UX.
+- [X] ~~Better config format~~ Many drivers include their own structs that you can format into an opts string for a better UX.
 
 ...and any that may come up in the future.
 
