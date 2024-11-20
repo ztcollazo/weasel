@@ -96,6 +96,8 @@ func (o *Opts) toDSN(driver string) (string, error) {
 		return dsn, nil
 
 	case "sqlite":
+		fallthrough
+	case "sqlite3":
 		params := url.Values{}
 		params.Add("mode", o.Mode)
 		params.Add("cache", o.Cache)
@@ -141,6 +143,8 @@ func (o *Opts) setDefaults(driver string) {
 			o.ApplicationName = "myapp"
 		}
 	case "sqlite":
+		fallthrough
+	case "sqlite3":
 		if o.Mode == "" {
 			o.Mode = "memory"
 		}
